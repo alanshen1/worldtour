@@ -192,7 +192,7 @@ function wireUI() {
 let last = 0, slow = 0, fast = 0;
 function loop(now) {
   requestAnimationFrame(loop);
-  const raw = (now - last) / 1000; last = now; const dt = Math.min(raw, 0.1);
+  const raw = Math.max(0, (now - last) / 1000); last = now; const dt = Math.min(raw, 0.1);
   if (!cur) return;
   if (!paused) step(dt);
   draw();
