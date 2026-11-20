@@ -41,15 +41,15 @@ export default {
     const r = rng(1843);
     const world = createWorld({
       sky: { top: 0x040716, horizon: 0x2c2248, bottom: 0x04050b, haze: 0.42 },
-      sun: { dir: [-0.5, 0.55, -0.6], color: 0x8ea4ff, power: 0.4, disc: 0xe6ecff, size: 0.0005 },
+      sun: { dir: [-0.5, 0.55, -0.6], color: 0x8ea4ff, power: 0.4, disc: 0x6a7696, size: 0.0004 },
       ambient: { sky: 0x30365f, ground: 0x261c24, power: 0.6 },
       fog: { color: 0x1a1733, density: 0.00042 }, stars: 260, exposure: 1.15, env: 0.5,
     });
     // x is east, z is south. The Huangpu flows north between the Bund (west bank) and Lujiazui (east bank).
-    const path = [[-1040, 24, -300], [-400, 24, -300], [-275, 26, -245], [-250, 26, -120], [-246, 26, 60], [-170, 36, 230], [70, 58, 250], [400, 100, 65], [560, 130, 140], [690, 205, 215], [830, 290, 330], [915, 360, 480], [930, 430, 630], [830, 470, 740], [640, 478, 600], [570, 474, 410]];
+    const path = [[-1040, 24, -300], [-400, 24, -300], [-275, 26, -245], [-252, 26, -100], [-180, 36, 230], [70, 58, 250], [400, 105, 65], [560, 145, 140], [690, 200, 215], [830, 270, 330], [935, 335, 470], [960, 395, 600], [880, 430, 700], [760, 445, 690], [660, 455, 560], [600, 455, 360]];
     const NJ = -300, PEARL = [430, -40], JIN = [720, 320], WFC = [940, 340], TOWER = [830, 540];
     const xf = (z) => -345 + 0.00022 * z * z, xb = (z) => -250 + 0.00022 * clamp(z, -600, 600) ** 2;
-    const focus = [[0.2, xf(27) - 8, 66, 27], [0.3, xf(27) - 8, 66, 27], [0.38, PEARL[0], 150, PEARL[1]], [0.5, PEARL[0], 170, PEARL[1]], [0.58, JIN[0], 330, JIN[1]], [0.66, WFC[0], 440, WFC[1]], [0.73, TOWER[0], 520, TOWER[1]], [0.8, TOWER[0], 560, TOWER[1]]];
+    const focus = [[0.25, xf(36) - 8, 62, 36], [0.33, xf(36) - 8, 62, 36], [0.42, PEARL[0], 150, PEARL[1]], [0.56, PEARL[0], 180, PEARL[1]], [0.63, JIN[0], 330, JIN[1]], [0.69, WFC[0], 440, WFC[1]], [0.75, TOWER[0], 500, TOWER[1]], [0.8, TOWER[0], 540, TOWER[1]]];
     const clear = clearance(path), mirrored = new THREE.Group();
 
     // ---- river and land: dark ground whose streets glow, see-through water over a mirror image of the far bank
@@ -150,11 +150,11 @@ export default {
     }
 
     // ---- the Bund: a curving row of floodlit stone banks and hotels, the Customs House clock tower in the middle
-    const stone = facadeMat({ color: 0xbfa27c, floor: 4.6, bay: 3.6, frame: [0.3, 0.14], glass: 0x1a1410, lit: 0.4, litColor: 0xffd08a, night: 1.3, rough: 0.9 }); stone.emissive.set(0xff9438); stone.emissiveIntensity = 0.38;
-    const trim = mat(0xe2c79a, { rough: 0.8, emissive: 0xffa848, glow: 0.62 }), plinth = mat(0x8a7558, { rough: 0.9, emissive: 0xff8a30, glow: 0.3 }), slate = mat(0x2a2c33, { rough: 0.7 }), verdigris = mat(0x4f9a84, { rough: 0.6, emissive: 0x30c090, glow: 0.7 }), tile = mat(0x3a6a78, { rough: 0.6, emissive: 0x2a8090, glow: 0.45 });
+    const stone = facadeMat({ color: 0xd9c7a4, floor: 4.6, bay: 3.6, frame: [0.3, 0.14], glass: 0x241a12, lit: 0.4, litColor: 0xffe0a8, night: 1.2, rough: 0.9 }); stone.emissive.set(0xffac58); stone.emissiveIntensity = 0.3;
+    const trim = mat(0xf0dcb8, { rough: 0.8, emissive: 0xffc070, glow: 0.5 }), plinth = mat(0xa08a68, { rough: 0.9, emissive: 0xffa040, glow: 0.42 }), slate = mat(0x2a2c33, { rough: 0.7 }), verdigris = mat(0x4f9a84, { rough: 0.6, emissive: 0x30c090, glow: 0.7 }), tile = mat(0x3a6a78, { rough: 0.6, emissive: 0x2a8090, glow: 0.45 });
     const bund = bag(), bcols = [], clockFaces = [];
     const row = [[-1, 48, 46, 'pyramid'], [-1, 46, 60, 'boc'], [-1, 44, 30, 'cupola'], [-1, 52, 28, 'columns'], [-1, 50, 32, 'plain'], [1, 40, 30, 'turrets'], [1, 44, 36, 'plain'], [1, 50, 28, 'cupola'], [1, 42, 34, 'columns'], [1, 48, 30, 'plain'], [1, 56, 34, 'clock'], [1, 86, 30, 'dome'], [1, 44, 34, 'turrets'], [1, 58, 26, 'columns'], [1, 40, 32, 'plain'], [1, 46, 28, 'cupola'], [1, 52, 34, 'plain']];
-    const edge = { '-1': NJ - 27, 1: NJ + 27 };
+    const edge = { '-1': NJ - 36, 1: NJ + 36 };
     for (const [s, w, h, kind] of row) {
       const zc = edge[s] + s * w / 2, d = 44; edge[s] += s * (w + 6);
       const M = new THREE.Matrix4().makeRotationY(Math.atan2(1, -0.00044 * zc)).setPosition(xf(zc) - d / 2, 3, zc), col = (lx, ly, lz, rad, ch) => { const p = new THREE.Vector3(lx, ly, lz).applyMatrix4(M); bcols.push({ x: p.x, y: p.y, z: p.z, sx: rad, sy: ch, sz: rad, ry: PI / 2 }); };
@@ -180,15 +180,22 @@ export default {
     const mall = [], shopGlow = [], mallLights = [], puxiTall = [];
     let si = 0;
     for (let x = -1100; x < -370; x += 46) for (const s of [-1, 1]) {
-      const back = x < -960 ? 50 : 26, h = r.range(30, 58); mall.push({ x: x + 20, z: NJ + s * (back + 21), w: 42, d: 42, h, y: 3, color: r.pick(oldTones) });
+      const back = x < -960 ? 50 : 26, h = r.range(30, 58); mall.push({ x: x + 20, z: NJ + s * (back + 21), w: 42, d: 42, h, y: 3, color: r.pick([0x8a7868, 0x9a8470, 0x74685e, 0xa89078]) });
       shopGlow.push({ x: x + 20, y: 3.2, z: NJ + s * (back - 0.3), sx: 40, sy: 5.5, sz: 0.6, color: r.pick([0xffc880, 0xffe0b0, 0xffb060, 0xbfe0ff]) });
       const txt = shops[si++ % shops.length], c = r.pick(NEON), inv = r.chance(0.4), sg = sign(txt, txt.length * 4.4 + 2, { vertical: true, color: inv ? '#fff' : c, bg: inv ? (c === '#ffffff' ? '#c01030' : c) : '#14060c', glow: 2.1, pad: 0.2 });
       sg.position.set(x + 20 + r.range(-12, 12), 3 + r.range(15, Math.min(34, h - 10)), NJ + s * (back - 3.2)); sg.rotation.y = -PI / 2; world.add(sg);
       for (let k = 0; k < 4; k++) mallLights.push([x + k * 11.5, 9.5, NJ + s * (back - 5)]);
     }
-    world.add(buildings(mall, warm, { cast: false }), instances(UNIT(), glowMat(0xffffff, 1.5, { toneMapped: false }), shopGlow, { cast: false }));
+    const fronts = paint(256, 64, (c) => { c.fillStyle = '#1a1210'; c.fillRect(0, 0, 256, 64); for (let i = 0; i < 8; i++) { c.fillStyle = r.pick(['#ffe2b0', '#fff2d8', '#ffc880', '#ffd8a0', '#d8ecff']); c.fillRect(i * 32 + 2, 20, 28, 42); c.fillStyle = r.pick(NEON); c.fillRect(i * 32 + 2, 4, 28, 11); c.fillStyle = 'rgba(30,16,10,0.6)'; for (let k = 0; k < 5; k++) c.fillRect(i * 32 + 4 + r.range(0, 22), 38 + r.range(0, 10), 3, 24); } });
+    world.add(buildings(mall, warm, { cast: false }), instances(UNIT(), glowMat(0xffffff, 1.5, { toneMapped: false, map: fronts }), shopGlow, { cast: false }));
     lights(world, mallLights, { color: [0xffd9a0, 0xfff0d0, 0xff8ad0, 0x8ae0ff], size: 3.4, power: 1.2 });
-    world.add(box(760, 0.3, 50, mat(0x2a2422, { rough: 0.6, emissive: 0xff9a50, glow: 0.12 }), -720, 3, NJ, { cast: false }));
+    const paving = paint(1024, 128, (c) => {
+      c.fillStyle = '#17120f'; c.fillRect(0, 0, 1024, 128);
+      for (const [y0, y1] of [[0, 46], [128, 82]]) { const gr = c.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(255,190,120,0.75)'); gr.addColorStop(1, 'rgba(255,190,120,0)'); c.fillStyle = gr; c.fillRect(0, Math.min(y0, y1), 1024, 46); }
+      c.fillStyle = 'rgba(120,96,80,0.5)'; for (let x = 0; x < 1024; x += 16) c.fillRect(x, 60, 9, 8);
+      for (let i = 0; i < 700; i++) { c.fillStyle = r.pick(['#0a0808', '#0a0808', '#e8d8c0', '#ff6a8a', '#7ad0ff', '#ffd060']); c.fillRect(r.range(0, 1024), r.range(6, 120), 1.6, 1.6); }
+    });
+    world.add(mesh(new THREE.PlaneGeometry(800, 100).rotateX(-PI / 2), glowMat(0xffffff, 0.8, { map: paving }), -740, 3.25, NJ, { cast: false }));
     [[400, '浦发银行'], [300, '上海'], [205, '外滩'], [60, '中国银行'], [-50, '和平饭店'], [-160, '大世界'], [-410, '东方明珠'], [-500, '海鸥饭店']].forEach(([z, txt], i) => {
       const h = r.range(56, 84), x = xf(z) - 100; puxiTall.push({ x, z, w: 44, d: 40, h, y: 3, color: 0x54504e });
       const sg = sign(txt, 15, { color: NEON[i % 6], bg: null, glow: 2.4 }); sg.position.set(x + 21, 3 + h + 9, z); sg.rotation.y = PI / 2; world.add(sg, box(txt.length * 13, 1, 1, slate, x + 20.5, 3 + h, z, { ry: PI / 2, cast: false }));
@@ -222,6 +229,9 @@ export default {
     for (let x = 270; x < 2400; x += 90) for (let z = -540; z < 1700; z += 90) cool.push([x, 12, z]);
     for (let z = -300; z < 1700; z += 16) cool.push([236, 9, z]);
     for (const b of [...pudong, ...puxi, ...north]) if (b.h > 110) red.push([b.x, b.h + 5, b.z]);
+    const sparkle = (n, x0, z0, x1, z1, keep, colors) => { const p = []; while (p.length < n) { const x = r.range(x0, x1), z = r.range(z0, z1); if (keep(x, z)) p.push([x, r.range(5, 45), z]); } return lights(world, p, { color: colors, size: 2.2, power: 0.8, fixed: true }); };
+    sparkle(2600, -2500, -540, -420, 1700, () => true, [0xffc27a, 0xffe0b0, 0xff9a50]); sparkle(1800, -2500, -2500, 2500, -1080, () => true, [0xffc27a, 0xffe0b0, 0xff9a50]);
+    mirrored.add(sparkle(2600, 250, -580, 2500, 1700, (x, z) => clear(x, z, 120) > 1e8, [0xdfeaff, 0xffe0b0, 0x9fd0ff]));
     lights(world, lamps, { color: 0xffb060, size: 4.5, power: 1 }); mirrored.add(lights(world, cool, { color: 0xdfeaff, size: 4.5, power: 0.9 }), lights(world, red, { color: 0xff3828, size: 7, power: 1.4 }));
 
     // ---- on the water: cruise boats strung with coloured light, slow dark barges

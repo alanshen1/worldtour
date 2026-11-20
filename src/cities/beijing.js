@@ -96,7 +96,7 @@ export default {
     water(world, -1.3, { size: [900, 1110], x: 0, z: -730, color: 0x4f6f78, rough: 0.12, ripple: 50, strength: 0.25 });
     const ridgeN = (x) => -2950 + 190 * Math.sin(x / 520), ridgeW = (z) => -3050 + 190 * Math.sin(z / 520), crest = (s) => 250 + 110 * Math.sin(s / 330 + 1) + 70 * Math.sin(s / 140);
     const hillAt = (x, z) => (0.62 + 0.8 * fbm(x / 420 + 9, z / 420, 3)) * Math.max(crest(x) * Math.exp(-(((z - ridgeN(x)) / 400) ** 2)), crest(z + 900) * Math.exp(-(((x - ridgeW(z)) / 400) ** 2)), 620 * Math.max(clamp((-z - 3300) / 900), clamp((-x - 3400) / 900)) * (0.6 + 0.5 * Math.sin(x / 410 + z / 370) ** 2)) - 6;
-    world.add(terrain({ size: 9200, seg: 150, height: hillAt, color: (x, y, z, slope) => (slope > 0.12 ? 0x6a6a58 : y > 150 ? 0x5d6c50 : 0x566a48) }));
+    world.add(terrain({ size: 9200, seg: 116, height: hillAt, color: (x, y, z, slope) => (slope > 0.12 ? 0x6a6a58 : y > 150 ? 0x5d6c50 : 0x566a48) }));
     const gw = [], sand = mat(0xd6bf96), wallPts = [];
     for (let x = 3900; x >= -2700; x -= 70) wallPts.push([x, ridgeN(x)]);
     for (let z = -2700; z <= 3300; z += 70) wallPts.push([ridgeW(z), z]);
@@ -132,7 +132,9 @@ export default {
     for (const x of [-22, -11, 0, 11, 22]) fc.add(box(6, 1.4, 16, marble, x, 0, 231));
     fc.add(box(64, 3, 64, stone, 0, 0, 560), box(44, 2.5, 44, stone, 0, 3, 560), cyl(3.4, 5.2, 29, stone, 0, 5.5, 560, 4), hipRoof(11, 11, 3, stone, 0, 34.5, 560, { ridge: 0.3 }));
     fc.add(box(108, 4, 108, stone, 0, 0, 715), box(76, 25, 76, facadeMat({ color: 0xe0d2b0, floor: 26, bay: 6.3, frame: [0.3, 0.06], glass: 0x7a6850, lit: 0 }), 0, 4, 715), box(86, 2.2, 86, mat(0xd8a84a), 0, 29, 715), box(80, 2, 80, mat(0xd8a84a), 0, 32.4, 715));
-    fc.add(cyl(0.3, 0.4, 30, marble, 0, 0, 320, 8), box(5, 3.2, 0.2, mat(0xd0261e), 2.7, 26.4, 320));
+    const flag = mat(0xd0261e), globe = mat(0xfff6e0, { emissive: 0xfff0d0, glow: 0.5 });
+    fc.add(cyl(0.3, 0.4, 27, marble, 0, 0, 320, 8), box(5, 3.2, 0.2, flag, 2.7, 23.4, 320));
+    for (let i = 0; i < 12; i++) for (const s of [-1, 1]) fc.add(cyl(0.25, 0.3, 11, marble, s * 245, 0, 340 + i * 46, 6), sphere(1.1, globe, s * 245, 11.4, 340 + i * 46, { seg: 8, rows: 6 }), box(0.2, 3, 2.2, flag, s * 56, 22.5, 182 + i * 3.2));
     gate(fc, 0, 905, 96, 30, 13, { base: grey, arches: 1, hall: { tile: greyTile, hb: 7, h1: 6, hu: 6, h2: 9 } });
     fc.add(box(54, 26, 22, facadeMat({ color: 0x8a8884, floor: 5.5, bay: 4.2, frame: [0.36, 0.34], glass: 0x2a2826, lit: 0 }), 0, 0, 996), hipRoof(62, 30, 8, greyTile, 0, 26, 996));
 
@@ -211,7 +213,7 @@ export default {
     while (cyp.length < 1200) { const x = r.range(75, 440) * (r.chance(0.5) ? 1 : -1), z = r.range(-140, 190); if (Math.abs(Math.abs(x) - 105) > 8) cyp.push([x, 0, z]); }
     while (cyp.length < 1600) { const a = r() * 6.28, d = Math.sqrt(r()), x = Math.cos(a) * d * 160, z = Math.sin(a) * d * 100; if (Math.hypot(x, z) > 22) cyp.push([x, 46 * Math.sqrt(Math.max(0, 1 - (x / 170) ** 2 - (z / 110) ** 2)) - 1.5, z - 1480]); }
     for (let i = 0; i < 40; i++) cyp.push([r.range(-100, 100), 0, r.range(-1180, -1085)]);
-    for (let x = -1500; x <= 1500; x += 24) for (const z of [242, 308]) if (Math.abs(x) > 70 || z > 300) broad.push([x, 0, z]);
+    for (let x = -840; x <= 840; x += 24) for (const z of [242, 308]) if (Math.abs(x) > 70 || z > 300) broad.push([x, 0, z]);
     while (tufts.length < 1500) { const x = r.range(-900, 900), z = r.range(-1500, 2160), s = r.range(4, 6.5); if (open(x, z, 4)) tufts.push({ x, y: 5 + s * 0.4, z, sx: s, sy: s * 0.8, sz: s, ry: r() * 6, color: r.pick(greens) }); }
     trees(world, cyp, 'cypress', { size: 16, color: [0x33522f, 0x3c5c33, 0x2c482c], rand: r });
     trees(world, broad, 'round', { size: 10, color: greens, rand: r });
