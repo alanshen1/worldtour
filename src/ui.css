@@ -1,0 +1,43 @@
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #fff;
+  font-family: "Noto Serif SC", "Songti SC", "Source Han Serif SC", Georgia, serif; -webkit-font-smoothing: antialiased; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+body:not(.awake) { cursor: none; }
+
+#veil { position: fixed; inset: 0; background: #05070c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: opacity 1.6s ease; z-index: 5; }
+#veil.gone { opacity: 0; pointer-events: none; }
+#veil-title { font-size: clamp(40px, 8vw, 84px); letter-spacing: 0.3em; margin-right: -0.3em; }
+#veil-en { font: 500 14px/1 system-ui, sans-serif; letter-spacing: 0.6em; margin-right: -0.6em; opacity: 0.6; }
+#veil-sub { font: 14px/1 system-ui, sans-serif; opacity: 0.5; margin-top: 28px; }
+
+#title { position: fixed; left: 6vw; bottom: 16vh; opacity: 0; transform: translateY(12px); transition: opacity 1.8s ease, transform 1.8s ease; pointer-events: none; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.65), 0 0 2px rgba(0, 0, 0, 0.5); }
+#title.on { opacity: 1; transform: none; }
+#t-count { font: 500 12px/1 system-ui, sans-serif; letter-spacing: 0.3em; opacity: 0.75; margin-bottom: 14px; }
+#t-zh { font-size: clamp(48px, 9vw, 112px); line-height: 1; letter-spacing: 0.12em; font-weight: 600; }
+#t-en { font: 300 clamp(18px, 2.6vw, 30px)/1.2 Georgia, serif; letter-spacing: 0.28em; text-transform: uppercase; margin-top: 14px; }
+#t-line { font: 15px/1.4 system-ui, sans-serif; opacity: 0.85; margin-top: 14px; letter-spacing: 0.08em; }
+
+#next { position: fixed; right: 5vw; top: 5vh; font: 13px/1 system-ui, sans-serif; letter-spacing: 0.12em; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8); }
+#next.on { opacity: 0.8; }
+
+#hud { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+  background: rgba(10, 14, 22, 0.55); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.12); opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; font: 13px/1 system-ui, sans-serif; }
+body.awake #hud { opacity: 1; transform: translate(-50%, 0); }
+#hud button, #cities button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+#hud button { min-width: 38px; height: 38px; padding: 0 10px; border-radius: 999px; font-size: 15px; }
+#hud button:hover, #hud button.active { background: rgba(255, 255, 255, 0.16); }
+#hud button:focus-visible, #cities button:focus-visible { outline: 2px solid #9fd0ff; outline-offset: 2px; }
+#hud label { display: flex; align-items: center; gap: 8px; padding: 0 8px; opacity: 0.85; white-space: nowrap; }
+#hud input[type=range] { width: 110px; accent-color: #9fd0ff; }
+
+#menu { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(720px, 92vw); max-height: 70vh; overflow: auto; padding: 14px; border-radius: 18px; box-sizing: border-box;
+  background: rgba(10, 14, 22, 0.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.12); }
+#cities { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+#cities button { display: grid; grid-template-columns: 22px 1fr; text-align: left; padding: 10px 12px; border-radius: 10px; row-gap: 3px; }
+#cities button:hover { background: rgba(255, 255, 255, 0.12); }
+#cities button.here { background: rgba(159, 208, 255, 0.2); }
+#cities i { font: 11px/1.6 system-ui, sans-serif; opacity: 0.5; font-style: normal; grid-row: span 2; }
+#cities b { font-size: 17px; font-weight: 600; letter-spacing: 0.08em; }
+#cities span { font: 11px/1 system-ui, sans-serif; opacity: 0.6; letter-spacing: 0.06em; }
+
+body.shot #hud, body.shot #title, body.shot #next, body.shot #veil, body.shot #menu { display: none !important; }
+@media (max-width: 560px) { #hud label { display: none; } #title { bottom: 18vh; } }
