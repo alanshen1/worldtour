@@ -1,6 +1,6 @@
 // Lofoten in the polar night: in from the open sea under the northern lights, low past the red rorbu cabins on their stilts, through the harbour,
 // by the fish-drying racks and the stave church on its knoll, then up the fjord between granite peaks with the aurora burning overhead.
-import { THREE, mergeGeometries, createWorld, rng, mat, glowMat, facadeMat, mesh, box, cyl, sphere, prism, instances, terrain, water, lights, noise2, fbm, smooth, clamp, lerp } from '../kit.js';
+import { THREE, mergeGeometries, createWorld, rng, mat, glowMat, facadeMat, mesh, box, cyl, sphere, prism, instances, terrain, water, trees, lights, noise2, fbm, smooth, clamp, lerp } from '../kit.js';
 
 // merges meshes that share a material into one mesh each
 function bake(list, at = [0, 0, 0], ry = 0) {
@@ -61,8 +61,8 @@ const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; retu
 // the northern lights: long hanging ribbons, drawn additively. Rays shimmer along them, the folds drift, green below and violet at the fringe.
 const AURORA_VERT = `attribute vec3 aInfo; uniform float uT; varying vec2 vUv; varying vec3 vInfo;
 void main(){ vUv = uv; vInfo = aInfo; vec3 p = position;
-  float w = sin(uv.x * 7.0 + uT * 0.17 + aInfo.y * 9.0) * 95.0 + sin(uv.x * 19.0 - uT * 0.29 + aInfo.y * 4.0) * 38.0 + sin(uv.x * 47.0 + uT * 0.5) * 12.0;
-  p += normal * w * (1.0 + 0.35 * uv.y);
+  float w = sin(uv.x * 38.0 + uT * 0.17 + aInfo.y * 9.0) * 190.0 + sin(uv.x * 93.0 - uT * 0.29 + aInfo.y * 4.0) * 75.0 + sin(uv.x * 150.0 + uT * 0.5) * 26.0;
+  p += normal * w * (1.0 + 0.3 * uv.y); p.y += sin(uv.x * 61.0 + uT * 0.13 + aInfo.y * 5.0) * 50.0;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`;
 const AURORA_FRAG = `uniform float uT, uPower; varying vec2 vUv; varying vec3 vInfo;
 float hash(float n){ return fract(sin(n) * 43758.5453); }
@@ -72,18 +72,16 @@ void main(){
   float rays = 0.5 * noise(x * 2.3 + uT * 0.22) + 0.3 * noise(x * 7.1 - uT * 0.5) + 0.2 * noise(x * 23.0 + uT * 1.1);
   float swell = smoothstep(0.15, 0.75, noise(x * 0.33 + uT * 0.06 + 5.0));
   float top = 0.3 + 0.7 * rays;
-  float body = smoothstep(0.0, 0.035, y) * pow(max(1.0 - y / top, 0.0), 1.6);
-  vec3 c = mix(vec3(0.12, 1.0, 0.42), vec3(0.5, 0.22, 1.0), smoothstep(0.18, 0.8, y / top));
-  c = mix(c, vec3(0.75, 1.0, 0.7), smoothstep(0.1, 0.0, y) * 0.6);
+  float body = smoothstep(0.0, 0.03, y) * pow(max(1.0 - y / top, 0.0), 1.25);
+  vec3 c = mix(vec3(0.1, 1.0, 0.42), vec3(0.8, 0.3, 1.0) * 1.9, smoothstep(0.14, 0.72, y / top));
+  c = mix(c, vec3(1.0, 0.4, 0.65), smoothstep(0.045, 0.0, y) * 0.55);
   float a = body * (0.25 + 0.75 * rays * rays * 1.6) * (0.25 + 0.75 * swell) * smoothstep(0.0, 0.1, vInfo.x) * smoothstep(1.0, 0.9, vInfo.x) * vInfo.z;
-  gl_FragColor = vec4(c * a * uPower, 1.0);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
+  gl_FragColor = vec4(c * a * uPower, 1.0);   // added straight onto the picture: no tone mapping, so faint parts stay faint
 }`;
 function auroraGeometry(bands) {
   const pos = [], nor = [], uv = [], info = [], idx = []; let base = 0;
   bands.forEach(([pts, height, power], b) => {
-    const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), N = 220, len = c.getLength(), p = new THREE.Vector3(), t = new THREE.Vector3();
+    const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), N = 420, len = c.getLength(), p = new THREE.Vector3(), t = new THREE.Vector3();
     for (let i = 0; i <= N; i++) {
       c.getPointAt(i / N, p); c.getTangentAt(i / N, t); const nl = Math.hypot(t.x, t.z) || 1;
       for (const v of [0, 1]) { pos.push(p.x, p.y + v * height, p.z); nor.push(-t.z / nl, 0, t.x / nl); uv.push(i / N * len / 6000, v); info.push(i / N, b * 0.37 + 0.1, power); }
@@ -98,15 +96,15 @@ function auroraGeometry(bands) {
 
 export default {
   build() {
-    const r = rng(68), moonDir = [-0.55, 0.36, -0.75];
+    const r = rng(68), moonDir = [-0.8, 0.38, -0.35];
     const world = createWorld({
       sky: { top: 0x040a1c, horizon: 0x163450, bottom: 0x0d2236, haze: 0.5 },
-      sun: { dir: moonDir, color: 0xbfd4ff, power: 1.5, disc: 0xe9f0ff, size: 0.0011 },
-      ambient: { sky: 0x7fb0c4, ground: 0x3c4a5e, power: 1.5 },
-      fog: { color: 0x0f2034, density: 0.00016 }, stars: 2600, exposure: 1.3, env: 0.7,
+      sun: { dir: moonDir, color: 0xbfd4ff, power: 1.7, disc: 0x8a94a8, size: 0.0005 },
+      ambient: { sky: 0x86b8c8, ground: 0x4a5a70, power: 2.3 },
+      fog: { color: 0x0f2034, density: 0.00016 }, stars: 2600, exposure: 1.45, env: 0.8,
     });
     // north is -Z. The village sits on islets at the mouth of a fjord that runs north between the peaks.
-    const path = [[560, 34, 1400], [430, 24, 1050], [300, 16, 700], [275, 14, 340], [150, 15, 200], [95, 15, 30], [-40, 20, -40], [-130, 22, -150], [-75, 36, -340], [-100, 50, -650], [-110, 62, -1000], [40, 85, -1400], [110, 120, -1800], [100, 150, -2150]];
+    const path = [[560, 34, 1400], [430, 24, 1050], [300, 16, 700], [275, 14, 340], [150, 15, 200], [95, 15, 30], [-40, 20, -40], [-130, 22, -150], [-66, 34, -338], [-100, 50, -650], [-110, 62, -1000], [40, 85, -1400], [110, 120, -1800], [100, 150, -2150]];
     const focus = [[0.1, 0, 900, -4500], [0.2, 170, 8, 330], [0.29, 170, 6, 330], [0.36, -20, 8, 110], [0.43, -230, 8, -80], [0.5, -10, 26, -360], [0.56, -10, 30, -360], [0.64, 0, 700, -3200], [0.76, 200, 800, -3600]];
     const flight = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p)), false, 'centripetal').getSpacedPoints(320);
 
@@ -123,7 +121,7 @@ export default {
       let m = sum > 0 ? sum * (0.62 + 0.62 * ridge(wx / 270, wz / 270)) + 70 * ridge(wx / 640, wz / 640) * smooth(0, 160, sum) - 14 : -30;
       const fs = fjord.near(x, z) - lerp(270, 185, smooth(0.04, 0.3, fjord.t));
       if (fs < 450) m = smin(m, fs < 0 ? -Math.min(40, -fs * 0.7) : 2.6 * fs ** 0.97 * (0.6 + 0.4 * fbm(x / 190, z / 190, 3) + 0.5 * ridge(x / 280, z / 280)), 24);
-      for (const [cx, cz, R, H] of islets) { const d = Math.hypot(x - cx, z - cz) / R; if (d < 1.15) m = Math.max(m, H * (1 - d ** 2.6) + 1.6 * (fbm(x / 22, z / 22, 2) - 0.5)); }
+      for (const [cx, cz, R, H] of islets) { const d = Math.hypot(x - cx, z - cz) / R; if (d < 1.7) { const e = d / (0.7 + 0.62 * fbm(x / 50 + cx, z / 50, 2)); if (e < 1.1) m = Math.max(m, H * (1 - e ** 2.4) * (0.75 + 0.5 * fbm(x / 30, z / 30, 2)) + 2.4 * (fbm(x / 13, z / 13, 2) - 0.5)); } }
       return Math.max(m, -30);
     };
     const inner = [0, -1350], size = [3400, 5700], NX = 220, NZ = Math.round(NX * size[1] / size[0]), X0 = inner[0] - size[0] / 2, Z0 = inner[1] - size[1] / 2, grid = new Float32Array((NX + 1) * (NZ + 1));
@@ -137,10 +135,10 @@ export default {
       const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, k = j * (NX + 1) + i;
       return lerp(lerp(grid[k], grid[k + 1], u), lerp(grid[k + NX + 1], grid[k + NX + 2], u), v);
     };
-    const C = (h) => new THREE.Color(h), tmp = new THREE.Color(), cSnow = C(0xe9f1fb), cSnowB = C(0xc6d6ea), cRock = C(0x50545e), cRockD = C(0x33363e), cWet = C(0x23272e);
+    const C = (h) => new THREE.Color(h), tmp = new THREE.Color(), cSnow = C(0xe9f1fb), cSnowB = C(0xc6d6ea), cRock = C(0x6a707c), cRockD = C(0x474c58), cWet = C(0x2a2f38);
     const tint = (x, y, z, slope) => {
       const n = fbm(x / 40, z / 40, 3), n3 = noise2(x / 17, z / 17);
-      tmp.copy(cSnow).lerp(cSnowB, smooth(0.35, 0.75, n)).lerp(n3 > 0.5 ? cRock : cRockD, smooth(0.26, 0.5, slope + (n - 0.5) * 0.22));
+      tmp.copy(cSnow).lerp(cSnowB, smooth(0.35, 0.75, n)).lerp(n3 > 0.5 ? cRock : cRockD, smooth(0.36, 0.62, slope + (n - 0.5) * 0.22));
       return y < 2 ? tmp.lerp(cWet, smooth(2, 0.6, y)) : tmp;
     };
     const ground = terrain({ size, center: inner, seg: NX, height: land, color: tint, rough: 0.9 }); keepSide(ground.material, 1);
@@ -152,12 +150,12 @@ export default {
     // ---- the sea, with everything mirrored in it: upside-down copies under see-through water (land lit once, cabins, lamps, the aurora)
     const mirror = new THREE.Group(); mirror.scale.y = -1; world.add(mirror);
     const refl = terrain({ size, center: inner, seg: 130, height: land, color: tint }), rc = refl.geometry.attributes.color, rn = refl.geometry.attributes.normal, moon = new THREE.Vector3(...moonDir).normalize();
-    for (let i = 0; i < rc.count; i++) { const l = 0.42 * Math.max(0, rn.getX(i) * moon.x + rn.getY(i) * moon.y + rn.getZ(i) * moon.z); rc.setXYZ(i, rc.getX(i) * (0.2 + l * 0.8), rc.getY(i) * (0.27 + l * 0.9), rc.getZ(i) * (0.36 + l)); }
+    for (let i = 0; i < rc.count; i++) { const l = 0.42 * Math.max(0, rn.getX(i) * moon.x + rn.getY(i) * moon.y + rn.getZ(i) * moon.z); rc.setXYZ(i, rc.getX(i) * (0.07 + l * 0.6), rc.getY(i) * (0.1 + l * 0.7), rc.getZ(i) * (0.15 + l * 0.8)); }
     refl.material = keepSide(new THREE.MeshBasicMaterial({ vertexColors: true }), -1); refl.receiveShadow = false; mirror.add(refl);
-    const sea = water(world, 0, { size: 16000, color: 0x0a1a2c, rough: 0.1, metal: 0.55, ripple: 55, strength: 0.32, env: 1.7 }); sea.material.transparent = true; sea.material.opacity = 0.6;
+    const sea = water(world, 0, { size: 16000, color: 0x0a1a2c, rough: 0.1, metal: 0.55, ripple: 55, strength: 0.32, env: 1.7 }); sea.material.transparent = true; sea.material.opacity = 0.7;
 
     // ---- the aurora (and its reflection)
-    const auroraMat = new THREE.ShaderMaterial({ vertexShader: AURORA_VERT, fragmentShader: AURORA_FRAG, uniforms: { uT: { value: 0 }, uPower: { value: 1.5 } }, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    const auroraMat = new THREE.ShaderMaterial({ vertexShader: AURORA_VERT, fragmentShader: AURORA_FRAG, uniforms: { uT: { value: 0 }, uPower: { value: 1.15 } }, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     const aurora = new THREE.Mesh(auroraGeometry([
       [[[-5200, 1000, -3600], [-2500, 1150, -5200], [0, 1200, -5900], [2500, 1150, -5200], [5200, 1000, -3400]], 1150, 1],
       [[[-4400, 1300, -1300], [-1800, 1500, -3300], [300, 1560, -4100], [2600, 1500, -3200], [4600, 1300, -1000]], 1400, 0.9],
@@ -176,18 +174,19 @@ export default {
       lamps.push([x + cx * (d / 2 + 0.6), y + 2.6, z + cz * (d / 2 + 0.6)]);
       return [cx, cz];
     };
-    for (const [ix, iz, R, , n, a0, a1] of [[170, 330, 75, 6, 15, -0.4, 4.6], [-20, 110, 95, 7, 15, -1.2, 2.6], [-210, -90, 105, 6.5, 7, -1.0, 0.9], [-10, -360, 92, 19, 6, 0.7, 2.6]]) for (let i = 0; i < n; i++) {
-      const a = lerp(a0, a1, (i + r.range(0.2, 0.8)) / n), w = r.range(6, 7.6), d = r.range(8.5, 11), x = ix + Math.cos(a) * R * 0.95, z = iz + Math.sin(a) * R * 0.95;
+    const shoreAt = (ix, iz, a, R) => { let q = R * 0.25; while (q < R * 1.7 && land(ix + Math.cos(a) * (q + 3), iz + Math.sin(a) * (q + 3)) > 0.9) q += 3; return q; };   // how far out the islet reaches in a direction
+    for (const [ix, iz, R, n, a0, a1] of [[170, 330, 75, 16, -0.4, 4.9], [-20, 110, 95, 17, -1.3, 2.8], [-210, -90, 105, 8, -1.1, 1.1], [-10, -360, 92, 6, 0.7, 2.6]]) for (let i = 0; i < n; i++) {
+      const a = lerp(a0, a1, (i + r.range(0.25, 0.75)) / n), w = r.range(6, 7.6), d = r.range(8.5, 11), q = shoreAt(ix, iz, a, R) + 1, x = ix + Math.cos(a) * q, z = iz + Math.sin(a) * q;
       const [cx, cz] = cabin(x, z, a, w, d, r.range(3.3, 4), r.pick(reds), 2.3);
       decks.push({ x: x + cx * 1.4, y: 1.95, z: z + cz * 1.4, w: w + 2.4, d: d + 3.4, h: 0.35, ry: Math.atan2(cx, cz) });
       for (const u of [-1, 1]) for (const v of [-1, 0, 1]) posts.push({ x: x + cx * (v * d * 0.45 + 1.4) - cz * u * w * 0.48, y: -2, z: z + cz * (v * d * 0.45 + 1.4) + cx * u * w * 0.48, w: 0.4, d: 0.4, h: 4 });
     }
-    const houseTones = [0xe8e2d4, 0xd8b04a, 0xa3261c, 0xf0ece2, 0x7f8f9a, 0xc9962e];
-    for (const [ix, iz, R, , n] of [[170, 330, 44, 6, 5], [-20, 110, 60, 7, 8], [-210, -90, 50, 6.5, 3]]) for (let i = 0; i < n; i++) {
-      const a = i / n * 6.283 + r.range(-0.3, 0.3), q = R * r.range(0.25, 1), x = ix + Math.cos(a) * q, z = iz + Math.sin(a) * q;
-      if (ix === -210 && x < -215) continue;
-      cabin(x, z, a + r.range(-0.4, 0.4), r.range(7.5, 9.5), r.range(10, 13), r.range(5.4, 6.6), r.pick(houseTones), land(x, z) - 0.5);
+    const houseTones = [0xe8e2d4, 0xd8b04a, 0xa3261c, 0xf0ece2, 0x7f8f9a, 0xc9962e], firs = [];
+    for (const [ix, iz, R, n] of [[170, 330, 75, 6], [-20, 110, 95, 9], [-210, -90, 105, 3], [-10, -360, 92, 0]]) {
+      for (let i = 0; i < n; i++) { const a = i / n * 6.283 + r.range(-0.3, 0.3), q = shoreAt(ix, iz, a, R) * r.range(0.15, 0.62), x = ix + Math.cos(a) * q, z = iz + Math.sin(a) * q; if (ix !== -210 || x > -215) cabin(x, z, a + r.range(-0.4, 0.4), r.range(7.5, 9.5), r.range(10, 13), r.range(5.4, 6.6), r.pick(houseTones), land(x, z) - 0.7); }
+      for (let i = 0; i < 60; i++) { const a = r() * 6.283, q = R * r.range(0.1, 0.9), x = ix + Math.cos(a) * q, z = iz + Math.sin(a) * q, y = land(x, z); if (y > 3 && !walls.some((w) => Math.hypot(w.x - x, w.z - z) < 11) && Math.hypot(x + 10, z + 360) > 26 && !(x < -180 && x > -280 && z > -140 && z < -84)) firs.push([x, y - 0.3, z]); }
     }
+    trees(world, firs, 'conifer', { size: 9, color: [0x2a4a40, 0x7f9aa6, 0x3f5f58, 0xa9c0cc] });
     const unit = G(1, 1, 1, 0, 0.5, 0), asBox = (b) => ({ x: b.x, y: b.y, z: b.z, sx: b.w, sy: b.h, sz: b.d, ry: b.ry, color: b.color });
     const wood = mat(0x3b2d22), snowMat = mat(0xe6eef8, { rough: 0.85 }), village = [instances(unit, cabinWall, walls.map(asBox)), instances(gable(1, 1, 1), mat(0xffffff, { rough: 0.9 }), gables), instances(roofG(), snowMat, snow)];
     world.add(...village, instances(unit, wood, posts.map(asBox)), instances(unit, wood, decks.map(asBox)));
@@ -200,15 +199,15 @@ export default {
     for (const s of [-1, 1]) for (const [y, off] of [[2.2, 2.4], [3.8, 1.66], [5.4, 0.92]]) rackParts.push([G(29, 0.2, 0.2, 0, y, s * off), pole], [G(28, 1.1, 0.14, 0, y - 0.7, s * off), tan]);
     const racks = []; for (let i = 0; i < 9; i++) racks.push({ x: -262 + (i % 3) * 36 + r.range(-2, 2), z: -128 + Math.floor(i / 3) * 16, ry: 0.25 + r.range(-0.04, 0.04) });
     racks.forEach((k) => { k.y = land(k.x, k.z) - 0.3; });
-    world.add(instances(fuse(rackParts), mat(0xffffff, { vertexColors: true, rough: 0.95 }), racks));
+    world.add(instances(fuse(rackParts), mat(0xffffff, { vertexColors: true, rough: 0.95 }), racks.filter((k) => k.y > 1.5)));
 
     // ---- the harbour: fishing boats at the quay with their mast lights, two more under way, a lighthouse on the outer skerry
     const hullG = prism([[-5.5, -1.7], [2.6, -1.7], [6, 0], [2.6, 1.7], [-5.5, 1.7]], 1.9, null).geometry.translate(0, -0.5, 0), topG = fuse([[G(2.6, 2.3, 2.5, -2.6, 2.55, 0), 0xf2f0ea], [G(2.8, 0.2, 2.8, -2.6, 3.8, 0), 0xe6eef8], [G(11.6, 0.2, 3.5, 0, 1.4, 0), 0x8a7a66],
       [new THREE.CylinderGeometry(0.09, 0.12, 7, 5).translate(-0.6, 5, 0), 0x3b2d22], [G(3.6, 0.1, 0.1, 1.2, 5.4, 0), 0x3b2d22], [G(1.4, 0.9, 1.6, 2.6, 1.9, 0), 0xd9722a]]);
     const hullTones = [0xf0ede4, 0xb5281f, 0x2f6aa0, 0xf0ede4, 0x1f7a5c, 0xe0a52a], moored = [], mastLights = [];
-    for (let i = 0; i < 11; i++) { const a = i < 7 ? -0.75 + i * 0.26 : 3.5 + (i - 7) * 0.3, [ix, iz, R] = i < 7 ? [-20, 110, 113] : [170, 330, 92]; moored.push({ x: ix + Math.cos(a) * R, y: 0.1, z: iz + Math.sin(a) * R, ry: -a + 1.57 + r.range(-0.2, 0.2), color: r.pick(hullTones) }); }
+    for (let i = 0; i < 11; i++) { const a = i < 7 ? -0.75 + i * 0.26 : 3.5 + (i - 7) * 0.3, [ix, iz, R0] = i < 7 ? [-20, 110, 95] : [170, 330, 75], R = shoreAt(ix, iz, a, R0) + 19; moored.push({ x: ix + Math.cos(a) * R, y: 0.1, z: iz + Math.sin(a) * R, ry: -a + 1.57 + r.range(-0.2, 0.2), color: r.pick(hullTones) }); }
     moored.forEach((b) => mastLights.push([b.x - 0.6 * Math.cos(b.ry), 8.8, b.z + 0.6 * Math.sin(b.ry)], [b.x - 2.6 * Math.cos(b.ry), 3.1, b.z + 2.6 * Math.sin(b.ry)]));
-    world.add(instances(hullG, mat(0xffffff, { rough: 0.6 }), moored), instances(topG, mat(0xffffff, { vertexColors: true, rough: 0.7 }), moored));
+    world.add(instances(hullG, mat(0xffffff, { rough: 0.6 }), moored), instances(topG, mat(0xffffff, { vertexColors: true, rough: 0.7 }), moored.map((b) => ({ ...b, color: undefined }))));
     const sailing = [[[-420, 620], [330, 900]], [[420, -720], [-300, -1250]]].map(([a, b], i) => {
       const g = new THREE.Group(); g.add(mesh(hullG, mat(hullTones[i + 1], { rough: 0.6 })), mesh(topG, mat(0xffffff, { vertexColors: true, rough: 0.7 })));
       g.add(lights(world, [[-0.6, 8.8, 0], [-2.6, 3.1, 0], [5.6, 2, 0]], { color: [0xfff2c8, 0xffb45a, 0x7dff9a], size: 5, power: 1.6 })); world.add(g); return { g, a, b };
@@ -216,7 +215,7 @@ export default {
     world.onUpdate((t) => { sailing.forEach(({ g, a, b }, i) => { const u = (t * 0.008 + i * 0.4) % 1; g.position.set(lerp(a[0], b[0], u), 0.1 + Math.sin(t * 1.3 + i) * 0.12, lerp(a[1], b[1], u)); g.rotation.set(Math.sin(t * 0.9 + i) * 0.03, Math.atan2(-(b[1] - a[1]), b[0] - a[0]), 0); }); });
     const white = mat(0xf2f0ea), lh = [400, land(400, 560), 560];
     world.add(...bake([cyl(2.2, 3, 12, white, 0, 0, 0, 12), cyl(2.65, 2.75, 2.4, mat(0xb5281f), 0, 5, 0, 12), cyl(2.8, 2.8, 0.4, wood, 0, 12, 0, 12), cyl(1.5, 1.5, 2.2, glowMat(0xfff0b0, 2.2, { toneMapped: false }), 0, 12.4, 0, 8), cyl(0, 2, 1.6, mat(0xb5281f), 0, 14.6, 0, 8), box(5, 3.4, 6, white, 5, 0, 0)], lh));
-    const beam = new THREE.Group(); for (const s of [0, Math.PI]) beam.add(mesh(new THREE.ConeGeometry(16, 260, 12, 1, true).rotateZ(Math.PI / 2).translate(130, 0, 0), glowMat(0xfff2c0, 1, { additive: true, opacity: 0.07, side: THREE.DoubleSide, fog: false }), 0, 0, 0, { ry: s, cast: false, receive: false }));
+    const beam = new THREE.Group(); for (const s of [0, Math.PI]) beam.add(mesh(new THREE.ConeGeometry(16, 260, 12, 1, true).rotateZ(Math.PI / 2).translate(130, 0, 0), glowMat(0xfff2c0, 1, { additive: true, opacity: 0.045, side: THREE.DoubleSide, fog: false }), 0, 0, 0, { ry: s, cast: false, receive: false }));
     beam.position.set(lh[0], lh[1] + 13.5, lh[2]); world.add(beam); world.onUpdate((t) => { beam.rotation.y = t * 0.5; });
 
     // ---- the stave church on its knoll: tarred timber, tier upon tier of steep snowy roofs, dragon heads on the gables
@@ -232,7 +231,7 @@ export default {
     world.add(...bake(sv, SC, 0.5)); lamps.push([SC[0] + 12, SC[1] + 3, SC[2] + 20], [SC[0] - 16, SC[1] + 3, SC[2] + 6]);
 
     // ---- lamplight: at every door and along the quays, each with its reflection
-    for (let i = 0; i < 26; i++) { const [ix, iz, R] = i < 13 ? [-20, 110, 78] : [170, 330, 58], a = i * 0.483; lamps.push([ix + Math.cos(a) * R, land(ix + Math.cos(a) * R, iz + Math.sin(a) * R) + 5, iz + Math.sin(a) * R]); }
+    for (let i = 0; i < 26; i++) { const [ix, iz, R] = i < 13 ? [-20, 110, 60] : [170, 330, 45], a = i * 0.483; lamps.push([ix + Math.cos(a) * R, land(ix + Math.cos(a) * R, iz + Math.sin(a) * R) + 5, iz + Math.sin(a) * R]); }
     lights(world, lamps, { color: [0xffb45a, 0xffc470, 0xffa040], size: 9, power: 1.5 });
     lights(world, mastLights, { color: [0xfff2c8, 0xffb45a], size: 5, power: 1.6 });
     const glints = lights(world, [...lamps, ...mastLights].map(([x, y2, z]) => [x, y2, z]), { color: 0xffb45a, size: 8, power: 0.8 }); glints.renderOrder = -1; mirror.add(glints);
