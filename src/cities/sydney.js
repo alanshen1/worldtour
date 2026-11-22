@@ -79,7 +79,7 @@ export default {
     world.add(bake(hills.map(([cx, cz, rx, rz, h]) => dome(1, grass, cx, G - 0.5, cz, { scale: [rx, h, rz], cast: false }))));
 
     // ---- the Opera House: podium, two halls of white sails, the little restaurant shells
-    const oh = new THREE.Group(), tile = mat(0xf4f1e8, { rough: 0.6, side: THREE.DoubleSide, env: 0.25, emissive: 0xfff8ec, glow: 0.22 }), bronze = mat(0x33291f, { rough: 0.2, metal: 0.6, side: THREE.DoubleSide }), granite = mat(0xc0a28a);
+    const oh = new THREE.Group(), tile = mat(0xf4f1e8, { rough: 0.6, side: THREE.DoubleSide, env: 0.25, emissive: 0xfff8ec, glow: 0.22 }), bronze = mat(0x8a6f52, { rough: 0.3, metal: 0.25, side: THREE.DoubleSide, emissive: 0xffc98a, glow: 0.28, env: 1 }), granite = mat(0xc0a28a);
     oh.add(box(106, 9, 198, granite, 0, 0, 0), box(94, 4, 156, granite, 0, 9, -14), box(98, 1.2, 190, mat(0x4a3a30), 0, 5.2, 0));
     for (let i = 0; i < 6; i++) oh.add(box(84, 13 - i * 2, 6, granite, 0, 0, 67 + i * 6));
     const hall = (specs, x, z, ry, s) => {
