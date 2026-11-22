@@ -20,12 +20,12 @@ export default {
     const r = rng(1886);
     const world = createWorld({
       sky: { top: 0x1a5fc8, horizon: 0xb4d8f2, bottom: 0x7fa6c2, haze: 0.62 },
-      sun: { dir: [0.62, 0.46, 0.5], color: 0xfff4e2, power: 3.2, disc: 0xfffaf0, size: 0.0005 },
+      sun: { dir: [0.82, 0.46, -0.12], color: 0xfff4e2, power: 3.2, disc: 0xfffaf0, size: 0.0005 },
       ambient: { sky: 0x9cc4ff, ground: 0x4a5a58, power: 0.9 },
       fog: { color: 0xc2def2, density: 0.00011 }, exposure: 1.0, env: 1.0,
     });
-    const path = [[1010, 112, 770], [870, 96, 700], [520, 50, 452], [150, 36, 372], [-250, 40, 322], [-640, 40, 180], [-960, 46, -80], [-1090, 70, -480], [-1010, 88, -860], [-800, 80, -1080], [-420, 60, -1060], [-120, 54, -960], [130, 50, -790]];
-    const focus = [[0.08, 100, 150, -700], [0.14, 300, 60, 150], [0.24, -100, 110, -300], [0.36, -500, 120, -900], [0.46, -300, 200, -1500], [0.56, -1050, 80, -1280], [0.7, -1050, 70, -1350], [0.78, 350, 25, -480]];
+    const path = [[1010, 112, 770], [870, 96, 700], [520, 50, 452], [150, 36, 372], [-250, 40, 322], [-640, 40, 180], [-960, 46, -80], [-1090, 70, -480], [-1010, 88, -860], [-800, 80, -1080], [-440, 60, -1010], [-60, 50, -810], [220, 44, -662]];
+    const focus = [[0.08, 100, 150, -700], [0.14, 300, 60, 150], [0.24, -100, 110, -300], [0.36, -500, 120, -900], [0.46, -300, 200, -1500], [0.56, -1050, 80, -1280], [0.7, -1050, 70, -1350], [0.78, 330, 25, -480]];
     const clear = clearance(path);
 
     // ---- where the land is: the downtown peninsula between Burrard Inlet and False Creek, Stanley Park at its tip, the North Shore across the water
@@ -36,14 +36,15 @@ export default {
     const N = (x, z) => {
       const d = northShore(x) - z, n = fbm(x / 900 + 2, z / 900, 4), ridge = 1 - Math.abs(2 * fbm(x / 1300, z / 1300 + 5, 3) - 1);
       const lions = 260 * (Math.exp(-(((x + 720) / 120) ** 2) - ((z + 3500) / 120) ** 2) + Math.exp(-(((x + 520) / 110) ** 2) - ((z + 3430) / 110) ** 2));
-      return -12 + 15 * smooth(-20, 10, d) + smooth(80, 1700, d) ** 1.25 * (300 + 420 * ridge + 300 * n) + lions * smooth(1200, 1900, d) + 20 * fbm(x / 120, z / 120, 2) * smooth(150, 600, d);
+      const crag = 1 - Math.abs(2 * fbm(x / 330 + 9, z / 330, 3) - 1);
+      return -12 + 15 * smooth(-20, 10, d) + smooth(80, 1700, d) ** 1.25 * (330 + 430 * ridge + 300 * n + 170 * crag * crag) + lions * smooth(1200, 1900, d) + 20 * fbm(x / 120, z / 120, 2) * smooth(150, 600, d);
     };
     const c1 = new THREE.Color(), c2 = new THREE.Color();
     world.add(terrain({ size: [9000, 3300], center: [0, -3090], seg: 230, height: N, color: (x, y, z, slope) => {
-      const n = fbm(x / 110, z / 110, 3), snow = smooth(400, 500, y + 90 * n - 110 * slope);
+      const n = fbm(x / 110, z / 110, 3), snow = smooth(520, 640, y + 110 * n - 260 * slope);
       if (y < 3.4) return 0x5f5c54;
       const wood = y < 130 && slope < 0.12 ? c1.set(0x3a5a44).lerp(c2.set(0x6a7a68), n) : c1.set(0x1c4030).lerp(c2.set(0x2f5a3c), n);
-      return wood.lerp(c2.set(0x5a5a5c), smooth(0.3, 0.5, slope) * 0.8).lerp(c2.set(0xf6f9ff), snow);
+      return wood.lerp(c2.set(0x5e6066), smooth(0.24, 0.42, slope) * 0.85).lerp(c2.set(0xf6f9ff), snow);
     } }));
     water(world, 0, { color: 0x1f4f6a, rough: 0.08, strength: 0.22, ripple: 80 });
     const wet = mat(0x3c4148, { rough: 0.32, metal: 0.15 }), cap = [];
@@ -81,9 +82,9 @@ export default {
     const CX = 350;
     world.add(box(64, 9, 330, mat(0x8a8e92, { rough: 0.8 }), CX, -4, -475), box(54, 15, 300, facadeMat({ color: 0xe9eef0, floor: 5, bay: 4, frame: [0.1, 0.2], glass: 0x3f6f8a, lit: 0.1, night: 0.4 }), CX, 5, -470));
     for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
-      const g = new THREE.ConeGeometry(21, 30, 4, 4, true).rotateY(Math.PI / 4), p = g.attributes.position;
-      for (let k = 0; k < p.count; k++) { const u = 1 - (p.getY(k) + 15) / 30, q = 1 - 0.38 * Math.sin(Math.PI * u); p.setX(k, p.getX(k) * q); p.setZ(k, p.getZ(k) * q); }
-      g.computeVertexNormals(); white.add(g, CX + s * 13.5, 35, -350 - i * 58); steel.add(new THREE.CylinderGeometry(0.3, 0.3, 9, 5), CX + s * 13.5, 54, -350 - i * 58);
+      const g = new THREE.ConeGeometry(21, 38, 4, 4, true).rotateY(Math.PI / 4), p = g.attributes.position;
+      for (let k = 0; k < p.count; k++) { const u = 1 - (p.getY(k) + 19) / 38, q = 1 - 0.38 * Math.sin(Math.PI * u); p.setX(k, p.getX(k) * q); p.setZ(k, p.getZ(k) * q); }
+      g.computeVertexNormals(); white.add(g, CX + s * 13.5, 39, -350 - i * 58); steel.add(new THREE.CylinderGeometry(0.3, 0.3, 9, 5), CX + s * 13.5, 62, -350 - i * 58);
     }
     const shipM = facadeMat({ color: 0xf6f6f2, floor: 3, bay: 2.6, frame: [0.12, 0.3], glass: 0x1f3f58, lit: 0.1, night: 0.4, rough: 0.5 });
     world.add(buildings([{ x: CX + 62, z: -470, y: 7, w: 30, d: 250, h: 18 }, { x: CX + 62, z: -476, y: 25, w: 26, d: 200, h: 9 }, { x: CX + 62, z: -486, y: 34, w: 20, d: 120, h: 5 }], shipM));
@@ -111,7 +112,7 @@ export default {
     world.add(box(150, 8, 70, mat(0x55585c, { rough: 0.7 }), -200, -5, 428)); const sheds = [0, 1, 2, 3, 4, 5].map((i) => ({ x: -255 + (i % 3) * 52, z: 412 + (i / 3 | 0) * 30, y: 3, w: 44, d: 22, h: 9, color: r.pick([0xc0563a, 0x3a8a9a, 0xe2b03a, 0x5a8a4a, 0xb9b4aa]) }));
     const yacht = mergeGeometries([new THREE.BoxGeometry(2.4, 1.2, 8).translate(0, 0.5, 0), new THREE.CylinderGeometry(0.08, 0.08, 10, 4).translate(0, 5.6, 0.6)]);
     const moored = []; for (let i = 0; i < 150; i++) { const x = r.range(-520, 560), z = r.chance(0.5) ? 458 - r.range(0, 22) : 0; const zz = z || (A[1] + (Bp[1] - A[1]) * (x - A[0]) / (Bp[0] - A[0]) + 348 + r.range(0, 20)); if (zz < 462 && mainland(x, zz) < 0 && downtown(x, zz) < -6) moored.push({ x, y: 0, z: zz, ry: r.range(-0.2, 0.2), s: r.range(0.8, 1.3) }); }
-    for (let i = 0; i < 90; i++) moored.push({ x: r.range(-420, 180), y: 0, z: r.range(-640, -585) - Math.abs(r.range(-1, 1)) * 30, ry: 1.57 + r.range(-0.2, 0.2), s: r.range(0.9, 1.5) });
+    for (let i = 0; i < 90; i++) moored.push({ x: r.range(-420, 60), y: 0, z: r.range(-640, -585) - Math.abs(r.range(-1, 1)) * 30, ry: 1.57 + r.range(-0.2, 0.2), s: r.range(0.9, 1.5) });
     world.add(instances(yacht, mat(0xf4f3ee, { rough: 0.5 }), moored.filter((b) => downtown(b.x, b.z) < -8), { cast: false }));
     const ferryG = pile().add(new THREE.BoxGeometry(3, 1.3, 7).translate(0, 0.6, 0)).add(new THREE.BoxGeometry(2.8, 1.5, 4.6).translate(0, 2, 0)).add(new THREE.BoxGeometry(3.2, 0.25, 5.4).translate(0, 2.9, 0)).geo();
     const ferries = [0x2f8ad0, 0xe2553a, 0xf2c230, 0x3aa86a, 0x8a4ac0, 0xe88a3a].map((c) => world.add(mesh(ferryG, mat(c, { rough: 0.5 }))));
@@ -120,10 +121,10 @@ export default {
     // ---- floatplanes: taxiing in Coal Harbour, then lifting off and climbing out over the park
     const planeW = pile().add(new THREE.BoxGeometry(1.5, 1.6, 9).translate(0, 2.6, 0)).add(new THREE.BoxGeometry(15, 0.25, 2.2).translate(0, 3.6, -1)).add(new THREE.BoxGeometry(5, 0.2, 1.3).translate(0, 3, 4)).add(new THREE.BoxGeometry(0.2, 2, 1.6).translate(0, 4, 4));
     for (const s of [-1, 1]) planeW.add(new THREE.BoxGeometry(0.9, 0.8, 7).translate(s * 1.9, 0.4, -0.6)).add(new THREE.BoxGeometry(0.15, 1.6, 0.15).translate(s * 1.5, 1.4, -1.6)).add(new THREE.BoxGeometry(0.15, 1.6, 0.15).translate(s * 1.5, 1.4, 1));
-    const planeG = planeW.geo(), planes = [0xf4f3ee, 0xf2c230, 0xf4f3ee].map((c) => world.add(mesh(planeG, mat(c, { rough: 0.4 }))));
+    const planeG = planeW.geo(), planes = [0xf4f3ee, 0xf2c230, 0xf4f3ee, 0xe2553a].map((c) => world.add(mesh(planeG, mat(c, { rough: 0.4 }), 0, 0, 0, { scale: 1.5 })));
     world.onUpdate((t) => planes.forEach((m, i) => {
-      const u = ((t / 26 + i / 3) % 1), run = smooth(0, 0.3, u), up = Math.max(0, u - 0.28);
-      m.position.set(260 - 1500 * (u * 0.35 + run * 0.65 * u), 0.2 + 420 * up ** 1.5, -600 - 330 * u - i * 28); m.rotation.set(-0.3 * smooth(0.26, 0.4, u), Math.PI / 2 + 0.2, 0, 'YXZ');
+      const u = ((t / 26 + i / 4) % 1), run = smooth(0, 0.3, u), up = Math.max(0, u - 0.28);
+      m.position.set(120 - 1400 * (u * 0.35 + run * 0.65 * u), 0.2 + 420 * up ** 1.5, -640 - 300 * u - i * 22); m.rotation.set(-0.3 * smooth(0.26, 0.4, u), Math.PI / 2 + 0.2, 0, 'YXZ');
     }));
 
     // ---- freighters at anchor, the port's cranes and containers, sulphur heaps on the far shore
@@ -140,8 +141,8 @@ export default {
       keep: (x, z) => mainland(x, z) > 24 && Math.hypot(x - SX, z - SZ) > 90, height: (x, z) => Math.min(r.range(8, 16) + (r.chance(0.08) ? r.range(20, 50) : 0), clear(x, z, 90) - 30) });
     south.push(...cityGrid({ rand: rng(6), area: [680, -200, 3000, 480], block: 46, street: 18, jitter: 0.3, palette: [0xa0553a, 0xb9b0a0, 0x8a6a5a, 0xc9c0b0], keep: (x, z) => mainland(x, z) > 24 && r.chance(0.8), height: (x, z) => Math.min(r.range(9, 22), clear(x, z, 90) - 30) }));
     south.forEach((b) => { b.y = 3; });
-    const north = cityGrid({ rand: rng(7), area: [-3200, -2250, 3200, -1560], block: 36, street: 20, jitter: 0.3, palette: [0xe2dcd0, 0xd8d2c6, 0xb9c2c6, 0xc9b8a4], keep: (x, z) => N(x, z) > 4 && N(x, z) < 150 && Math.abs(x + 1050) > 60 && r.chance(0.7), height: (x, z) => r.range(7, 13) + 60 * Math.exp(-((x / 260) ** 2) - ((z + 1640) / 90) ** 2) * r() });
-    north.forEach((b) => { b.y = N(b.x, b.z) - 6; b.h += 6; });
+    const north = cityGrid({ rand: rng(7), area: [-3200, -2250, 3200, -1560], block: 36, street: 20, jitter: 0.3, palette: [0xd8d2c6, 0xb9b4a8, 0xa9b2b6, 0xc9b8a4, 0x8a7a6a], keep: (x, z) => N(x, z) > 4 && N(x, z) < 110 && Math.abs(x + 1050) > 60 && r.chance(0.7), height: (x, z) => r.range(7, 13) + 60 * Math.exp(-((x / 260) ** 2) - ((z + 1640) / 90) ** 2) * r() });
+    north.forEach((b) => { b.y = N(b.x, b.z) - 14; b.h += 12; });
     world.add(buildings([...south, ...north, ...sheds], concM, { cast: false }));
     const leafy = []; for (let i = 0; i < 520; i++) { const x = r.range(-1500, 1400), z = r.range(480, 1300); leafy.push([x, 3, z]); }
     trees(world, leafy, 'round', { size: 11, color: [0x3e7a3a, 0x4c8a42, 0x35693a, 0xc98a2a] });
