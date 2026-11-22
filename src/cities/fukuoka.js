@@ -36,23 +36,23 @@ export default {
   build() {
     const r = rng(1889);
     const world = createWorld({
-      sky: { top: 0x151a46, horizon: 0xf58a4c, bottom: 0x2a2c50, haze: 0.42 },
+      sky: { top: 0x10153f, horizon: 0xff8648, bottom: 0x2a2c50, haze: 0.27 },
       sun: { dir: [-0.93, 0.07, -0.3], color: 0xff9a5a, power: 1.7, disc: 0xffb478, size: 0.0018 },
-      ambient: { sky: 0x5c68a8, ground: 0x40302c, power: 0.8 },
-      fog: { color: 0xa8705e, density: 0.00042 }, stars: 200, exposure: 1.08, env: 0.9,
+      ambient: { sky: 0x6a74b8, ground: 0x4a3832, power: 1.1 },
+      fog: { color: 0x7a5a6c, density: 0.00034 }, stars: 200, exposure: 1.12, env: 0.9,
     });
     // x is east, z is south; Hakata Bay lies to the north (z < -300), the Naka river runs north at x = 1130..1200. Land stands 2.5 m above the water.
-    const path = [[-330, 46, -760], [-262, 45, -610], [-150, 50, -330], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 27, 602], [950, 24, 600], [1085, 16, 630], [1147, 10, 530], [1147, 9.5, 300], [1148, 12, 90], [1160, 28, -130]];
+    const path = [[-262, 45, -610], [-205, 46, -468], [-150, 50, -330], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 27, 602], [950, 24, 600], [1085, 16, 625], [1152, 9.5, 530], [1146, 9, 300], [1142, 10, 110], [1150, 28, -110]];
     const TOWER = [-60, -160], DOME = [260, -40], CASTLE = [570, 365], SHRINE = [900, 558], G = 2.5;
     const focus = [[0.08, TOWER[0], 120, TOWER[1]], [0.2, TOWER[0], 120, TOWER[1]], [0.29, DOME[0], 40, DOME[1]], [0.37, DOME[0], 40, DOME[1]], [0.45, 610, 20, 345], [0.52, 610, 20, 345], [0.58, 880, 8, 556], [0.67, 950, 8, 556], [0.74, 1122, 5, 440], [0.8, 1122, 5, 260]];
     const clear = clearance(path);
 
     // ---- sea, river and land
-    water(world, 0, { size: [9400, 4700], z: -2650, color: 0x2b3a55, rough: 0.16, strength: 0.4 });
+    water(world, 0, { size: [9400, 4700], z: -2650, color: 0x2b3a55, rough: 0.16, strength: 0.22, ripple: 130 });
     const river = water(world, 0, { size: [70, 3500], x: 1165, z: 1450, color: 0x0c1220, rough: 0.1, strength: 0.35, ripple: 30 });
     Object.assign(river.material, { transparent: true, opacity: 0.55, depthWrite: false });
     const P = 42, streetGlow = paint(128, 128, (g) => { const w = 12 * 128 / P / 2; g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#4a321c'; g.fillRect(0, 0, 128, w); g.fillRect(0, 128 - w, 128, w); g.fillRect(0, 0, w, 128); g.fillRect(128 - w, 0, w, 128); }, [1, 1]);
-    const landMat = mat(0x3a3c40, { rough: 0.95, emissive: 0xffffff, glow: 1 }); landMat.emissiveMap = streetGlow;
+    const landMat = mat(0x54565a, { rough: 0.95, emissive: 0xffffff, glow: 1 }); landMat.emissiveMap = streetGlow;
     const slab = (x0, z0, x1, z1) => { const g = new THREE.BoxGeometry(x1 - x0, 5.5, z1 - z0).translate((x0 + x1) / 2, G - 2.75, (z0 + z1) / 2), p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / P, p.getZ(i) / P); return g; };
     world.add(mesh(mergeGeometries([slab(-3400, -240, 1130, 3400), slab(-3400, -300, -430, -240), slab(250, -300, 1130, -240), slab(1200, -300, 3400, 3400)]), landMat, 0, 0, 0, { cast: false }));
     const sand = new THREE.BufferGeometry(); sand.setAttribute('position', new THREE.Float32BufferAttribute([-430, G, -240, 250, G, -240, 250, -0.8, -312, -430, G, -240, 250, -0.8, -312, -430, -0.8, -312], 3)); sand.computeVertexNormals();
@@ -154,7 +154,7 @@ export default {
 
     // ---- the yatai: a long row of food stalls on the west bank, lanterns, noren, steam, customers on their stools
     {
-      const X = 1121, wood = mat(0x3a2a20, { rough: 0.9 }), stalls = [], roofs = [], lanterns = [], people = [], warm = [], redDots = [], noren = [], shops = ['ラーメン', 'おでん', '焼き鳥', '天ぷら', '餃子', 'もつ鍋', '博多屋台', '明太子'];
+      const X = 1120, K = 1.5, wood = mat(0x3a2a20, { rough: 0.9 }), stalls = [], roofs = [], lanterns = [], people = [], warm = [], redDots = [], noren = [], shops = ['ラーメン', 'おでん', '焼き鳥', '天ぷら', '餃子', 'もつ鍋', '博多屋台', '明太子'];
       const atlas = paint(512, 512, (c) => { shops.forEach((t, i) => { c.fillStyle = ['#b3221c', '#1f2f6a', '#f2ead8', '#7a1c18', '#274a3a', '#b3221c', '#f2ead8', '#1f2f6a'][i]; c.fillRect(0, i * 64, 512, 64); c.fillStyle = i === 2 || i === 6 ? '#8a1a14' : '#fff6e0'; c.font = '700 46px "Noto Sans CJK JP","WenQuanYi Zen Hei",sans-serif'; c.textBaseline = 'middle'; c.textAlign = 'center'; [...t].forEach((ch, k, a) => c.fillText(ch, 512 * (k + 0.5) / a.length, i * 64 + 34)); c.fillStyle = 'rgba(0,0,0,0.35)'; for (let k = 1; k < 4; k++) c.fillRect(k * 128 - 1, i * 64 + 20, 2, 44); }); });
       const frame = mergeGeometries([...[[-1.6, -2.6], [-1.6, 2.6], [1.6, -2.6], [1.6, 2.6]].map(([a, c]) => new THREE.BoxGeometry(0.14, 2.6, 0.14).translate(a, 1.3, c)), new THREE.BoxGeometry(0.7, 1, 5.2).translate(1.15, 0.5, 0), new THREE.BoxGeometry(0.12, 2.5, 5.4).translate(-1.65, 1.25, 0), new THREE.BoxGeometry(3.2, 1.1, 0.12).translate(0, 0.55, -2.65), new THREE.BoxGeometry(3.2, 1.1, 0.12).translate(0, 0.55, 2.65)]);
       for (let z = 548, i = 0; z > 76; z -= 14.5, i++) {
