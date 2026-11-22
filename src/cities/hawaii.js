@@ -61,12 +61,12 @@ export default {
       if (y < 9 && x > -1150) return c1.set(0x8f9a78).lerp(c2.set(0x6f9a52), n);
       return slope > 0.55 ? c1.set(0x6f5238).lerp(c2.set(0x3c6a30), smooth(0.25, 0.6, n)) : c1.set(0x3f8434).lerp(c2.set(0x6fa843), smooth(0.35, 0.75, n) * 0.8);
     };
-    world.add(terrain({ size: [6600, 4300], center: [0, -1250], seg: 210, color: paint, height: (x, z) => H(x, z) - 7 * Math.max(fine(x, z, -2700, -1000, -750, 150), fine(x, z, 330, 1570, -770, 470)) }));
-    world.add(terrain({ size: [1700, 900], center: [-1850, -300], seg: 210, color: paint, height: (x, z) => H(x, z) + 0.5 }), terrain({ size: [1240, 1240], center: [950, -150], seg: 150, color: paint, height: (x, z) => H(x, z) + 0.5 }));
+    world.add(terrain({ size: [6600, 4300], center: [0, -1250], seg: 150, color: paint, height: (x, z) => H(x, z) - 7 * Math.max(fine(x, z, -2700, -1000, -750, 150), fine(x, z, 330, 1570, -770, 470)) }));
+    world.add(terrain({ size: [1700, 900], center: [-1850, -300], seg: 170, color: paint, height: (x, z) => H(x, z) + 0.5 }), terrain({ size: [1240, 1240], center: [950, -150], seg: 124, color: paint, height: (x, z) => H(x, z) + 0.5 }));
 
     // ---- the sea: turquoise over the reef, deepening to blue
     const sea = water(world, 0, { size: 9000, color: 0xffffff, rough: 0.08, metal: 0.25, strength: 0.3, ripple: 60 });
-    const sg = new THREE.PlaneGeometry(9000, 9000, 200, 200).rotateX(-Math.PI / 2), sp = sg.attributes.position, sc = new Float32Array(sp.count * 3);
+    const sg = new THREE.PlaneGeometry(9000, 9000, 160, 160).rotateX(-Math.PI / 2), sp = sg.attributes.position, sc = new Float32Array(sp.count * 3);
     for (let i = 0; i < sp.count; i++) {
       const x = sp.getX(i), z = sp.getZ(i), off = Math.min(x > 1500 ? 1e4 : (z - shore(x)) * (x < -1150 ? 2.2 : 1), (Math.hypot(x - DX, z - DZ) - 560) * 1.8, Math.abs(Math.hypot(x - 2380, z - 560) - 60) * 2.5);
       c1.set(0x2fd0bc).lerp(c2.set(0x1790bc), smooth(60, 330, off)).lerp(c2.set(0x0f5c9c), smooth(300, 1000, off)).toArray(sc, i * 3);
