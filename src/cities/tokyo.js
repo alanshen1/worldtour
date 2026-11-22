@@ -26,19 +26,19 @@ export default {
   build() {
     const r = rng(1964);
     const world = createWorld({
-      sky: { top: 0x04071a, horizon: 0x2d2350, bottom: 0x0a0914, haze: 0.5 },
-      sun: { dir: [-0.35, 0.78, 0.45], color: 0x93a8ff, power: 0.6, disc: 0xe6ecff, size: 0.0008 },   // the moon
-      ambient: { sky: 0x39457a, ground: 0x2c1e26, power: 0.75 },
-      fog: { color: 0x1b1730, density: 0.0004 }, stars: 900, exposure: 1.15, env: 0.5,
+      sky: { top: 0x080c2a, horizon: 0x4c3676, bottom: 0x141022, haze: 0.45 },
+      sun: { dir: [-0.35, 0.78, 0.45], color: 0xc0c8f0, power: 0.8, disc: 0xe6ecff, size: 0.0008 },   // the moon
+      ambient: { sky: 0x5262ac, ground: 0x4a3040, power: 1.35 },
+      fog: { color: 0x2a2148, density: 0.00036 }, stars: 900, exposure: 1.45, env: 0.6,
     });
-    const path = [[240, 60, 1650], [150, 28, 1250], [70, 140, 700], [680, 42, 460], [700, 40, 230], [770, 80, -110], [1010, 200, -50], [1075, 265, -250], [900, 200, -470], [590, 62, -700], [300, 30, -700], [0, 28, -700], [-200, 30, -700], [-480, 44, -700]];
+    const path = [[240, 60, 1650], [150, 28, 1250], [70, 140, 700], [680, 42, 460], [700, 40, 230], [770, 80, -110], [1010, 200, -50], [1075, 265, -250], [960, 170, -560], [700, 60, -700], [400, 32, -700], [100, 28, -700], [-200, 30, -700], [-480, 44, -700]];
     const TT = [0, 650], SKY = [1180, -160], GATE = [700, 230], PAG = [640, 20], CZ = -700, HW = 22;   // CZ: the canyon's centre line, HW: half its width
-    const focus = [[0.08, TT[0], 170, TT[1]], [0.26, TT[0], 185, TT[1]], [0.33, GATE[0], 12, GATE[1]], [0.4, GATE[0], 12, GATE[1]], [0.44, PAG[0], 34, PAG[1]], [0.5, PAG[0], 40, PAG[1]], [0.55, SKY[0], 340, SKY[1]], [0.64, SKY[0], 350, SKY[1]], [0.72, 300, 30, CZ], [0.78, 0, 30, CZ]];
+    const focus = [[0.08, TT[0], 170, TT[1]], [0.26, TT[0], 185, TT[1]], [0.33, GATE[0], 12, GATE[1]], [0.4, GATE[0], 12, GATE[1]], [0.44, PAG[0], 34, PAG[1]], [0.5, PAG[0], 40, PAG[1]], [0.55, SKY[0], 340, SKY[1]], [0.63, SKY[0], 350, SKY[1]], [0.7, 420, 36, CZ], [0.78, 0, 30, CZ]];
     const clear = clearance(path);
 
     // ---- the bay, the Sumida river and the land between
-    water(world, -1.5, { color: 0x122448, rough: 0.1, ripple: 80, strength: 0.3, env: 1.6 });
-    const tarmac = mat(0x1e2029, { rough: 0.8 });
+    water(world, -1.5, { color: 0x1c3468, rough: 0.1, ripple: 80, strength: 0.3, env: 1.6 });
+    const tarmac = mat(0x2b2e3c, { rough: 0.8 });
     for (const o of [[[-4300, 1000], [-900, 1000], [-900, 1130], [-700, 1130], [-700, 1000], [-350, 1000], [-350, 1095], [-120, 1095], [-120, 1000], [880, 1000], [880, -4300], [-4300, -4300]], [[960, 1000], [4300, 1000], [4300, -4300], [960, -4300]], [[700, 1150], [4300, 1150], [4300, 4300], [700, 4300]]])
       world.add(prism(o, 3, tarmac, 0, -3, 0, { cast: false }));
 
@@ -130,7 +130,7 @@ export default {
     const neon = ['#ff3b6b', '#39e6ff', '#ffe14a', '#ff7a1a', '#7dff6a', '#ffffff', '#ff5ad1', '#6aa8ff'], solid = ['#c2142c', '#0c3fa8', '#111111', '#0a6a3a', '#111111', '#7a12a0', '#d8480a'];
     const canyon = [], panels = [], boards = new THREE.Group(), pools = [], beacons = [];
     let blades = 0, wi = 0;
-    for (const s of [-1, 1]) for (let x = 505; x > -392;) {
+    for (const s of [-1, 1]) for (let x = 642; x > -392;) {
       const w = r.range(20, 40), d = r.range(26, 36), z = CZ + s * (HW + d / 2), face = CZ + s * HW; x -= w / 2;
       const h = Math.min(r.range(38, 82), clear(x, CZ + s * (HW + 13), 30) - 24);
       if (h > 9 && !(x > -232 - w / 2 && x < -168 + w / 2) && Math.abs(x - 150) > 14 + w / 2) {
@@ -138,8 +138,8 @@ export default {
         panels.push({ x, y: 0.6, z: face - s * 0.3, sx: w - 3, sy: 4.4, sz: 0.5, color: r.pick([0xffe2b0, 0xfff4e0, 0xffc0d0, 0xc0f0ff, 0xffd080]) });
         for (let k = r.int(2, 4); k > 0; k--) { const tall = r.chance(0.5); panels.push({ x: x + r.range(-w / 2 + 3, w / 2 - 3), y: r.range(7, h - 12), z: face - s * 0.3, sx: tall ? r.range(1.2, 2.2) : r.range(4, 9), sy: tall ? r.range(6, 12) : r.range(1.2, 3), sz: 0.5, color: r.pick(neon) }); }
         if (r.chance(0.5)) panels.push({ x, y: h - 1.2, z: face - s * 0.3, sx: w - 1.2, sy: 1, sz: 0.6, color: r.pick(neon) });
-        if (h > 22 && blades < 42 && r.chance(0.85)) {
-          const txt = words[wi++ % words.length], n = [...txt].length, tall = Math.min(4.3 * (100.8 * n + 48) / 144, h - 9), plain = r.chance(0.45);
+        if (h > 22 && blades < 46 && r.chance(0.85)) {
+          const txt = words[wi++ % words.length], n = [...txt].length, tall = Math.min(4.7 * (100.8 * n + 48) / 144, h - 9), plain = r.chance(0.45);
           const b = sign(txt, tall, { vertical: true, color: plain ? r.pick(neon) : '#ffffff', bg: plain ? '#0b0b10' : r.pick(solid), glow: 1.9 });
           b.position.set(x + w / 2 - 1.5, r.range(7 + tall / 2, h - 3 - tall / 2), face - s * (0.5 + b.geometry.parameters.width / 2)); b.rotation.y = Math.PI / 2; boards.add(b); blades++;
         }
@@ -147,15 +147,20 @@ export default {
           const txt = words[wi++ % words.length], plain = r.chance(0.5), b = sign(txt, r.range(4.5, 6.5), { color: plain ? r.pick(neon) : '#ffffff', bg: plain ? '#0b0b10' : r.pick(solid), glow: 1.8 });
           b.position.set(x, r.range(h * 0.5, h - 8), face - s * 0.7); b.rotation.y = s > 0 ? Math.PI : 0; boards.add(b);
         }
-        pools.push([x, 4, face - s * 3]);
+        if (h > 44 && r.chance(0.45)) {   // a rooftop hoarding, turned to face down the avenue
+          const b = sign(words[wi++ % words.length], r.range(7, 10), { color: '#ffffff', bg: r.pick(solid), glow: 1.9 });
+          b.position.set(x + w / 2 - 1, h + 1 + b.geometry.parameters.height / 2, z - s * (d / 2 - b.geometry.parameters.width / 2 - 1)); b.rotation.y = Math.PI / 2; boards.add(b);
+        }
+        pools.push([x, 4, face - s * 3], [x, h * 0.5, face - s * 2]);
         if (h > 60) beacons.push([x - w / 2 + 1, h + 1, z], [x + w / 2 - 1, h + 1, z]);
       }
       x -= w / 2 + 0.6;
     }
-    world.add(buildings(canyon.map((b) => ({ ...b, color: r.pick([0x3a3d48, 0x4a4650, 0x2f3440, 0x54505a]) })), facadeMat({ floor: 3.8, bay: 2.6, frame: [0.16, 0.22], glass: 0x10131c, lit: 0.4, litColor: 0xffdcae, night: 1.25, rough: 0.6 }), { cast: false }), boards);
+    world.add(buildings(canyon.map((b) => ({ ...b, color: r.pick([0x555a6c, 0x6a6474, 0x484e62, 0x746e7c]) })), facadeMat({ floor: 3.8, bay: 2.6, frame: [0.16, 0.22], glass: 0x10131c, lit: 0.4, litColor: 0xffdcae, night: 1.25, rough: 0.6 }), { cast: false }), boards);
     world.add(instances(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), glowMat(0xffffff, 1.5, { toneMapped: false }), panels, { cast: false, receive: false }));
-    world.onUpdate((t, dt, cam) => { boards.visible = Math.hypot(cam.position.x - 50, cam.position.z - CZ) < 1000; });
-    lights(world, pools, { color: neon.map((c) => new THREE.Color(c).getHex()), size: 46, power: 0.2, rand: rng(6) });
+    world.onUpdate((t, dt, cam) => { boards.visible = Math.hypot(cam.position.x - 120, cam.position.z - CZ) < 1150; });
+    lights(world, pools, { color: neon.map((c) => new THREE.Color(c).getHex()), size: 52, power: 0.24, rand: rng(6) });
+    world.add(box(1060, 0.1, HW * 2, glowMat(0x2c2244), 125, 0.02, CZ, { cast: false, receive: false }));
 
     // ---- the scramble crossing: zebra stripes every way, a crowd walking, giant screens on the corner buildings
     const X0 = -200, stripes = [], zebra = glowMat(0xb8bcc8, 0.55), ways = [];
@@ -181,13 +186,13 @@ export default {
     const hub = (x, z, cx, cz, s) => Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (s * s));
     const lots = cityGrid({
       rand: r, area: [-2700, -2700, 2700, 2300], block: 40, street: 14, jitter: 0.3, split: 0.3,
-      keep: (x, z) => (z < 978 || (x > 725 && z > 1175)) && !(Math.abs(z - CZ) < 78 && x > -415 && x < 530) && !rects.some(([a, b, c, d]) => x > a - 22 && x < c + 22 && z > b - 22 && z < d + 22),
+      keep: (x, z) => (z < 978 || (x > 725 && z > 1175)) && !(Math.abs(z - CZ) < 78 && x > -415 && x < 668) && !rects.some(([a, b, c, d]) => x > a - 22 && x < c + 22 && z > b - 22 && z < d + 22),
       height: (x, z) => Math.min((r.range(12, 40) + (r.chance(0.5) ? 1 : 0.25) * (190 * hub(x, z, -350, 480, 330) + 150 * hub(x, z, -80, -900, 300) + 210 * hub(x, z, -1500, -1500, 420) + 170 * hub(x, z, 380, -230, 260) + 120 * hub(x, z, 1600, 400, 400))) * (1 - 0.7 * hub(x, z, 700, 60, 280)), clear(x, z, 85) - 30),
     });
     const A = [], B = [], lampPts = [];
     for (const b of lots) {
-      if (b.h > 70) { b.color = r.pick([0x28303e, 0x222a38, 0x303848, 0x2a2e3a]); B.push(b); beacons.push([b.x - b.w / 2, b.h + 1, b.z - b.d / 2], [b.x + b.w / 2, b.h + 1, b.z + b.d / 2]); }
-      else { b.color = r.pick([0x4a4d55, 0x5a5c62, 0x3f4350, 0x66605c, 0x54585e]); A.push(b); }
+      if (b.h > 70) { b.color = r.pick([0x46526a, 0x3c4860, 0x525e78, 0x484e64]); B.push(b); beacons.push([b.x - b.w / 2, b.h + 1, b.z - b.d / 2], [b.x + b.w / 2, b.h + 1, b.z + b.d / 2]); }
+      else { b.color = r.pick([0x6c7080, 0x80828c, 0x5e6478, 0x8c8480, 0x767a86]); A.push(b); }
       lampPts.push([b.x + 27, 6, b.z + r.range(-20, 20)], [b.x + r.range(-20, 20), 6, b.z + 27]);
     }
     world.add(buildings(A, facadeMat({ floor: 3.4, bay: 3, frame: [0.25, 0.3], glass: 0x0f1218, lit: 0.38, litColor: 0xffd9a0, night: 1.4, rough: 0.9 }), { cast: false }));
@@ -204,6 +209,8 @@ export default {
     road([850, 1.2, 960], [850, 1.2, -1800], 80); road([993, 1.2, -1800], [993, 1.2, 960], 80, { color: 0xff2a1a });
     traffic(world, [[-800, 1, 1500], [0, 1, 1420], [700, 1, 1560], [1500, 1, 1800], [600, 1, 2100], [-400, 1, 1900]], { count: 9, color: 0xffa040, size: 10, speed: 5, loop: true });
     traffic(world, [[920, 1, 900], [925, 1, -200], [915, 1, -1500]], { count: 7, color: 0xffb060, size: 8, speed: 5 });
+    const glint = []; for (let i = 0; i < 900; i++) { const d = r() * r(); glint.push(i % 5 ? [r.range(-1500, 880), -1.2, 998 - 0 + d * 420] : [r.range(884, 956), -1.2, r.range(-1800, 990)]); }
+    lights(world, glint, { color: [0xffd9a0, 0xfff0d8, 0xff9a60, 0x9ad0ff, 0xff6a8a], size: 4.5, power: 0.55, rand: rng(9) });
     const spans = []; for (const z of [700, 268, -320, CZ, -1200]) spans.push(box(88, 2, z === CZ ? 44 : 18, concrete, 920, 0, z));
     world.add(bake(spans));
 
