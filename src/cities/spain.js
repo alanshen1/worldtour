@@ -26,13 +26,13 @@ export default {
     const r = rng(1882);
     const world = createWorld({
       sky: { top: 0x3f7ecb, horizon: 0xf7dcae, bottom: 0xc9b08a, haze: 0.42 },
-      sun: { dir: [-0.8, 0.36, -0.45], color: 0xffd6a0, power: 3.4, disc: 0xfff0c8, size: 0.0011 },
+      sun: { dir: [-0.8, 0.36, -0.45], color: 0xffd6a0, power: 3.4, disc: 0xfff0c8, size: 0.0006 },
       ambient: { sky: 0xc4d4f2, ground: 0xa08a6c, power: 1.0 },
       fog: { color: 0xeed5b0, density: 0.00027 }, exposure: 1.05, env: 0.8,
     });
     // the sea lies to +Z, the hills to -Z; +X runs up the coast. The Eixample's blocks sit on a 133 m grid.
-    const SF = [266, 0, -532], GL = [798, 0, -399], PG = [-250, -1400], MJ = [-1300, 330], COL = [-330, 330];
-    const path = [[-250, 162, -1640], [-250, 112, -1470], [-200, 92, -1250], [0, 80, -900], [150, 78, -690], [165, 75, -530], [250, 70, -400], [420, 80, -440], [735, 95, -310], [840, 80, 0], [775, 60, 380], [560, 30, 606], [150, 22, 640], [-200, 30, 520], [-470, 50, 330], [-760, 72, 230]];
+    const SF = [266, 0, -532], GL = [798, 0, -399], PG = [-250, -1400], MJ = [-1300, 330], COL = [-330, 400];
+    const path = [[-250, 152, -1700], [-250, 102, -1500], [-215, 86, -1270], [0, 80, -900], [150, 78, -690], [165, 75, -530], [250, 70, -400], [420, 80, -440], [735, 95, -310], [840, 80, 0], [775, 60, 380], [560, 30, 606], [150, 22, 640], [-180, 30, 560], [-480, 52, 360], [-790, 78, 222]];
     const focus = [[0.09, SF[0], 90, SF[2]], [0.2, SF[0], 95, SF[2]], [0.28, SF[0], 92, SF[2]], [0.34, SF[0], 85, SF[2]], [0.4, GL[0], 80, GL[2]], [0.45, GL[0], 80, GL[2]], [0.53, 720, 90, 450], [0.6, 720, 80, 450], [0.68, 150, 5, 640], [0.76, COL[0], 45, COL[1]]];
 
     // ---- the lie of the land: flat city, the hills behind with Park Güell's slope, Montjuïc, the beach shelving into the sea
@@ -40,7 +40,7 @@ export default {
       const edge = x > -50 ? 632 : x > -170 ? 830 : x > -650 ? 438 : 640, sea = -9 * smooth(edge, edge + (x > -50 ? 80 : 8), z);
       const north = Math.max(0, -1150 - z), calm = 1 - 0.9 * Math.exp(-((x - PG[0]) ** 2 + (z - PG[1]) ** 2) / 30000);
       const hills = north * 0.22 + smooth(0, 300, north) * calm * 60 * (fbm(x / 260, z / 260, 3) - 0.35) + 170 * Math.exp(-((x + 900) ** 2 + (z + 2500) ** 2) / 250000);
-      return Math.max(sea + Math.max(hills, 0), 175 * smooth(560, 40, Math.hypot(x - MJ[0], z - MJ[1])) ** 1.3 - (z > 640 ? 9 : 0));
+      return sea + Math.max(hills, 0) + 175 * smooth(560, 40, Math.hypot(x - MJ[0], z - MJ[1])) ** 1.3;
     };
     const C = (h) => new THREE.Color(h), tmp = new THREE.Color(), cCity = C(0x9c9388), cSand = C(0xecd7a2), cPine = C(0x4c7038), cDry = C(0xa39a5e), cBed = C(0x7fae9c);
     world.add(terrain({ size: 6400, center: [0, -300], seg: 250, height: land, color: (x, y, z) => {
@@ -76,7 +76,7 @@ export default {
 
     // ---- the old town and Barceloneta below the grid, Gràcia climbing behind it, plainer districts beyond
     const clearOf = (x, z, px, pz, d) => Math.hypot(x - px, z - pz) > d;
-    const old = cityGrid({ rand: r, area: [-860, 222, 620, 578], block: 38, street: 9, jitter: 0.3, split: 0.5, fill: 0.95, palette: creams, keep: (x, z) => land(x, z + 30) > -0.5 && land(x, z) < 1 && clearOf(x, z, ...COL, 60) && clearOf(x, z, 730, 455, 120), height: () => r.range(13, 22) });
+    const old = cityGrid({ rand: r, area: [-860, 222, 1100, 578], block: 38, street: 9, jitter: 0.3, split: 0.5, fill: 0.95, palette: creams, keep: (x, z) => land(x, z + 30) > -0.5 && land(x, z) < 1 && clearOf(x, z, ...COL, 85) && clearOf(x, z, 720, 470, 85), height: () => r.range(13, 22) });
     const gracia = cityGrid({ rand: r, area: [-1064, -1330, 1330, -1140], block: 44, street: 11, jitter: 0.3, split: 0.4, palette: creams, keep: (x, z) => clearOf(x, z, PG[0], -1330, 130), height: () => r.range(12, 20) });
     const outer = cityGrid({ rand: rng(5), area: [-2600, -1140, 2700, 590], block: 70, street: 20, jitter: 0.35, split: 0.5, palette: creams, keep: (x, z) => (x < -1140 || x > 1400) && land(x, z) < 3 && land(x, z + 60) > -0.5, height: () => r.range(12, 26) });
     const low = [...old, ...gracia, ...outer]; low.forEach((b) => { b.y = Math.max(0, land(b.x, b.z)) - 1; b.h += 1; });
@@ -103,16 +103,16 @@ export default {
     for (let i = 0; i < 7; i++) sf.push(cyl(1.3, 1.6, 30, stoneNew, -19.5 + i * 6.5, 0, 50, 8), cyl(0, 2.4, 9, stoneNew, -19.5 + i * 6.5, 42, 48, 8));
     sf.push(box(52, 12, 5, stoneNew, 0, 30, 49), box(60, 2, 14, stone, 0, 0, 54), box(20, 20, 1, glass, 0, 2, 46.2));
     world.add(...bake(sf, SF));
-    const perf = (color, round, bay) => facadeMat({ color, floor: 2.9, bay, frame: [0.3, 0.3], glass: 0x40342a, rough: 0.9, round, ground: 0 });
+    const perf = (color, round, bay) => facadeMat({ color, floor: 2.3, bay, frame: [0.3, 0.3], glass: 0x40342a, rough: 0.9, round, ground: 0 });
     const apostleG = L([[5.6, 0], [5.6, 36], [5.4, 50], [4.8, 64], [3.7, 78], [2.5, 89], [1.45, 96], [1.3, 100]], 20), centralG = L([[9, 0], [9, 38], [8.4, 52], [7.2, 66], [5.4, 80], [3.4, 92], [2, 98], [1.8, 100]], 12);
     const finialG = mosaic(L([[1.3, 0], [2, 2], [1.2, 4], [2.5, 6.5], [2.7, 8], [1.6, 9.6], [0.9, 12], [1.6, 13.4], [0.3, 15.4]], 10), r, [0xd8402c, 0xe9b520, 0xf6f2e6, 0xf6f2e6, 0x3f9a52, 0xe87a24, 0xd8402c]);
     const apostles = [], tips = [];
     for (const [fx, fz, hs, tone] of [[32, 0, [98, 107, 107, 98], 0xa58d6a], [-32, 0, [107, 112, 112, 107], 0xcdb78f], [0, 47, [110, 118, 118, 110], 0xe2d3b4]]) hs.forEach((h, i) => {
       const o = (i - 1.5) * 12.4, x = SF[0] + (fx ? fx : o), z = SF[2] + (fx ? o : fz);
-      apostles.push({ x, z, sy: h / 100, color: tone }); tips.push({ x, y: h - 0.5, z, s: 1.05 });
+      apostles.push({ x, z, sy: h / 100, sx: 0.86, sz: 0.86, color: tone }); tips.push({ x, y: h - 0.5, z, s: 0.95 });
     });
     const centrals = [{ x: SF[0], z: SF[2] - 4, sy: 1.56, sx: 1.12, sz: 1.12 }, { x: SF[0], z: SF[2] - 36, sy: 1.26, sx: 0.8, sz: 0.8 }, ...[-1, 1].flatMap((a) => [-1, 1].map((b) => ({ x: SF[0] + a * 13, z: SF[2] - 4 + b * 13, sy: 1.24, sx: 0.6, sz: 0.6 })))];
-    world.add(instances(apostleG, perf(0xffffff, 5.6, 2.2), apostles), instances(finialG, mat(0xffffff, { vertexColors: true, rough: 0.4 }), tips), instances(centralG, perf(0xe6d8ba, 9, 2.8), centrals));
+    world.add(instances(apostleG, perf(0xffffff, 5.6, 1.7), apostles), instances(finialG, mat(0xffffff, { vertexColors: true, rough: 0.4 }), tips), instances(centralG, perf(0xe6d8ba, 9, 2.1), centrals));
     const tops = [box(2.6, 17, 2.6, lit, 0, 156, -4), box(11, 2.6, 2.6, lit, 0, 165, -4), box(2.6, 2.6, 11, lit, 0, 165, -4), mesh(new THREE.OctahedronGeometry(5.5), lit, 0, 132, -36), mesh(new THREE.OctahedronGeometry(5.5).rotateY(0.785).rotateX(0.785), lit, 0, 132, -36)];
     for (const a of [-1, 1]) for (const b of [-1, 1]) tops.push(sphere(1.7, lit, a * 13, 126, -4 + b * 13, { seg: 8, rows: 6 }), box(6, 0.5, 2, lit, a * 13, 127, -4 + b * 13, { ry: a * b * 0.785 }));
     world.add(...bake(tops, SF));
@@ -180,7 +180,7 @@ export default {
       pg.push(box(40, 3.4, 1.4, rubble, s * 56, 0, 6), box(40.4, 0.7, 2, creamM, s * 56, 3.4, 6));
     }
     for (let i = 0; i < 16; i++) for (const s of [-1, 1]) pg.push(box(11, 0.5, 2.6, creamM, s * 8.5, i * 0.5, -10 - i * 2.4));
-    pg.push(box(5, 8.6, 40, creamM, 0, -0.4, -29, { rx: -0.2 }), mesh(mosaic(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 1, 3.2), r, bright), icing, 0, 5.2, -24, { rx: -0.2 }), box(96, 1, 60, sandy, 0, 7.4, -78), box(92, 2.4, 46, creamM, 0, 15, -72), box(90, 0.5, 44, sandy, 0, 17.3, -72));
+    pg.push(box(5, 8.6, 40, creamM, 0, -0.4, -29, { rx: -0.2 }), mesh(mosaic(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 1, 3.2), r, bright), icing, 0, 5.2, -24, { rx: -0.2 }), box(90, 0.8, 46, sandy, 0, 7.4, -72), box(92, 2.4, 46, creamM, 0, 15, -72), box(90, 0.5, 44, sandy, 0, 17.3, -72));
     const cols = []; for (let i = 0; i < 11; i++) for (let j = 0; j < 6; j++) cols.push({ x: PG[0] - 41 + i * 8.2, y: y0 + 8.2, z: -1345 - 53 - j * 7.6, sx: 1.25, sy: 7, sz: 1.25 });
     const bench = []; for (let i = 0; i < 60; i++) { const u = i / 59 * 2 - 1, wob = Math.sin(i * 0.9) * 2.6; bench.push(mesh(mosaic(G(3.4, 1.5, 1.6), r, bright), icing, u * 45, 17.5, -50.5 + wob + 21 * u ** 6, { ry: Math.cos(i * 0.9) * -0.7 })); }
     pg.push(...bench, box(26, 11, 16, mat(0xe8a8a0), 86, 6, -40), mesh(gable(16, 5, 26).rotateY(Math.PI / 2), mat(0xb8623c), 86, 17, -40), cyl(1.6, 2, 10, mat(0xe8a8a0), 96, 17, -44, 8), cyl(0, 2, 6, mat(0x5f9aa8), 96, 27, -44, 8));
@@ -189,14 +189,16 @@ export default {
     // ---- palms and plane trees, a few clouds lit from below
     const palms = [], planes = [], pines = [];
     for (let x = -40; x < 960; x += 13) palms.push([x, 0.3, 579 + r.range(-1.5, 1.5)]);
+    for (let i = 0; i < 40; i++) palms.push([720 + r.range(-80, 80), 0.2, 470 + r.range(-80, 80)]);
     for (let i = 0; i < 26; i++) palms.push([COL[0] + Math.cos(i * 0.5) * (34 + i % 3 * 9), 0.2, COL[1] + Math.sin(i * 0.5) * (34 + i % 3 * 9)], [-170 - i * 17, 0.2, 428]);
     for (let i = 0; i < 14; i++) palms.push([PG[0] + r.range(-90, 90), land(PG[0], -1330) - 0.5, -1328 + r.range(-8, 8)], [PAL[0] + r.range(40, 150), land(PAL[0] + 90, PAL[2] - 60), PAL[2] + r.range(-140, -30)]);
     for (const [cx, cz] of green) for (let i = 0; i < 26; i++) { const x = cx + r.range(-52, 52), z = cz + r.range(-52, 52); if (clearOf(x, z, GL[0], GL[2], 34) && Math.hypot(x - cx, z - cz) > 15) planes.push([x, 0, z]); }
-    for (let j = -6; j <= 0; j++) for (let x = -300; x < 900; x += 19) if (!skip(Math.round(x / 133), j)) planes.push([x, 0, j * 133 - 62.5]);
-    for (let i = 0; i < 4000 && pines.length < 330; i++) { const x = r.range(-1750, 700), z = r.range(-1900, 800), y = land(x, z); if (y > 8 && fbm(x / 110, z / 110, 2) > 0.45 && clearOf(x, z, PG[0], -1400, 62) && clearOf(x, z, PAL[0], PAL[2], 95) && clearOf(x, z, MJ[0] + 30, MJ[1] + 40, 60) && (z > -1500 || Math.abs(x - PG[0]) > 30) && (z < -1150 ? Math.abs(x - PG[0]) < 480 : true)) pines.push([x, y - 0.4, z]); }
+    for (let j = -5; j <= -2; j++) for (let x = -160; x < 760; x += 33) if (!skip(Math.round(x / 133), j)) planes.push([x, 0, j * 133 - 62.5]);
+    for (let i = 0; i < 4000 && pines.length < 230; i++) { const x = r.range(-1750, 700), z = r.range(-1900, 800), y = land(x, z); if (y > 8 && fbm(x / 110, z / 110, 2) > 0.45 && clearOf(x, z, PG[0], -1405, 56) && clearOf(x, z, PAL[0], PAL[2], 95) && clearOf(x, z, MJ[0] + 30, MJ[1] + 40, 60) && (z > -1500 || Math.abs(x - PG[0]) > 30) && (z < -1150 ? Math.abs(x - PG[0]) < 480 : true)) pines.push([x, y - 0.4, z]); }
+    for (let i = 0; i < 400 && pines.length < 340; i++) { const a = r() * 6.283, q = r.range(62, 300), x = PG[0] + Math.cos(a) * q * 1.3, z = -1420 + Math.sin(a) * q; if (z < -1350 && Math.abs(x - PG[0]) > 24) pines.push([x, land(x, z) - 0.4, z]); }
     trees(world, palms, 'palm', { size: 12 });
     trees(world, planes, 'round', { size: 11, color: [0x5a8a3c, 0x6a9a44, 0x4a7a38, 0x7aa24a] });
-    trees(world, pines, 'round', { size: 13, color: [0x3f6a34, 0x4a7638, 0x35602f] });
+    trees(world, pines, 'round', { size: 13, color: [0x3f6a34, 0x4a7638, 0x35602f] }).children.forEach((m) => { m.castShadow = false; });
     world.add(cyl(26, 26, 0.5, pool, 399, 0, -532, 24, { cast: false }), box(100, 0.3, 100, mat(0x8fa86a), 133, 0, -532, { cast: false }), box(100, 0.3, 100, mat(0x8fa86a), 399, 0, -532, { cast: false }), box(230, 0.3, 230, mat(0x8fa86a), 731, 0, -465, { cast: false }));
     clouds(world, { count: 10, area: [-3500, -3500, 3500, 3000], y: [1300, 1800], size: 190, color: 0xffe9c8, self: 0.55, rand: rng(3) });
 
