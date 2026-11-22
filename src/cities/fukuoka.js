@@ -42,7 +42,7 @@ export default {
       fog: { color: 0x7a5a6c, density: 0.00034 }, stars: 200, exposure: 1.12, env: 0.9,
     });
     // x is east, z is south; Hakata Bay lies to the north (z < -300), the Naka river runs north at x = 1130..1200. Land stands 2.5 m above the water.
-    const path = [[-222, 46, -470], [-160, 50, -320], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 34, 525], [980, 20, 590], [1095, 13, 596], [1150, 10, 515], [1143, 9.5, 300], [1140, 10.5, 120], [1148, 17, -70], [1225, 32, -192], [1450, 34, -202]];
+    const path = [[-222, 46, -470], [-160, 50, -320], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 34, 525], [980, 20, 590], [1095, 13, 596], [1150, 10, 515], [1143, 9.5, 300], [1140, 10.5, 120], [1148, 17, -55], [1215, 31, -158], [1430, 34, -168]];
     const TOWER = [-60, -160], DOME = [260, -40], CASTLE = [570, 365], SHRINE = [1560, -240], G = 2.5;
     const focus = [[0.08, TOWER[0], 125, TOWER[1]], [0.15, TOWER[0], 125, TOWER[1]], [0.21, DOME[0], 40, DOME[1]], [0.29, DOME[0], 40, DOME[1]], [0.37, 610, 20, 345], [0.44, 610, 20, 345], [0.63, 1122, 5, 520], [0.67, 1122, 5, 450], [0.72, 1122, 5, 320], [0.78, 1122, 5, 170], [0.8, 1122, 5, 110]];
     const clear = clearance(path), shade = (o) => { o.traverse((c) => { c.userData.shade = true; }); return o; };
@@ -195,7 +195,7 @@ export default {
     }
 
     // ---- the ordinary city: low and dense, taller round Momochi and Tenjin, windows coming on
-    const EXPWY = [[-2600, 150], [-600, 150], [150, 190], [700, 130], [1060, 60], [1088, -190]];
+    const EXPWY = [[-2600, 150], [-600, 150], [150, 190], [700, 130], [985, 60], [1000, -200]];
     const distLine = (L, x, z) => { let best = 1e9; for (let i = 0; i < L.length - 1; i++) { const [ax, az] = L[i], [bx, bz] = L[i + 1], dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)); best = Math.min(best, Math.hypot(x - ax - dx * t, z - az - dz * t)); } return best; };
     const tall = (x, z) => 45 * Math.exp(-((x - 100) ** 2) / 500 ** 2 - ((z + 60) ** 2) / 200 ** 2) + 60 * Math.exp(-((x - 850) ** 2 + (z - 200) ** 2) / 220 ** 2) + 40 * Math.exp(-((x - 1500) ** 2 + (z - 400) ** 2) / 300 ** 2);
     const lots = cityGrid({
