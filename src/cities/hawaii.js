@@ -49,8 +49,7 @@ export default {
       const land = lerp((1 + 1.5 * smooth(0, 40, d)) * smooth(-6, 4, d) + range, wall, cliffs);
       const rx = x - DX, rz = z - DZ, q = Math.hypot(rx, rz), a = Math.atan2(rz, -rx), rim = rimAt(a);
       const cone = q > 330 ? rim * (1 - clamp((q - 330) / 250)) ** 1.5 * (1 - 0.24 * gully(a) * clamp((q - 336) / 70)) : lerp(56, rim, smooth(205, 330, q) ** 1.6) + 5 * fbm(x / 60, z / 60, 2);
-      const sea = -40 * (1 - smooth(-30, 2, Math.max(d, cliffs * dc)));
-      const h = Math.max(land * smooth(-8, 6, d) + sea, cone > 0.4 ? cone : -40);
+      const dl = cliffs > 0.5 ? dc : d, h = Math.max(land * smooth(-8, 6, dl) - 40 * (1 - smooth(-30, 2, dl)), cone > 0.4 ? cone : -40);
       return h > 8 ? Math.min(h, clear(x, z, 80) - 28) : h;
     };
     const fine = (x, z, x0, x1, z0, z1) => smooth(x0, x0 + 40, x) * smooth(x1, x1 - 40, x) * smooth(z0, z0 + 40, z) * smooth(z1, z1 - 40, z);
@@ -58,7 +57,7 @@ export default {
     const paint = (x, y, z, slope) => {
       const q = Math.hypot(x - DX, z - DZ), n = fbm(x / 90, z / 90, 3);
       if (q < 590 && y > 2) { const g = q > 330 ? gully(Math.atan2(z - DZ, DX - x)) : n; const band = 0.82 + 0.18 * Math.sin(y * 0.42 + n * 5); return (slope > 0.5 ? c1.set(0x8f7650).lerp(c2.set(0x5f5a40), n) : c1.set(0x5f7a36).lerp(c2.set(0xb8a068), smooth(0.25, 0.8, g * 0.7 + n * 0.5))).multiplyScalar(q > 300 ? band : 1); }
-      if (y < 2.6) return x < -1150 ? 0x4a443c : x < 420 || x > 1300 ? 0xe8d8a6 : 0x8f9a78;
+      if (y < 2.6) return x < -1150 ? 0x4a443c : x < 420 ? 0xe8d8a6 : 0x86ac5c;
       if (y < 9 && x > -1150) return c1.set(0x8f9a78).lerp(c2.set(0x6f9a52), n);
       return slope > 0.55 ? c1.set(0x6f5238).lerp(c2.set(0x3c6a30), smooth(0.25, 0.6, n)) : c1.set(0x3f8434).lerp(c2.set(0x6fa843), smooth(0.35, 0.75, n) * 0.8);
     };
@@ -115,7 +114,7 @@ export default {
     world.add(buildings(pools, mat(0x46d0e0, { rough: 0.1, metal: 0.2, emissive: 0x2a9ab0, glow: 0.4 }), { cast: false }));
     // the low town behind, running back to the foot of the mountains
     const town = cityGrid({ rand: rng(4), area: [-1150, -1150, 1500, -200], block: 40, street: 15, palette: [0xf2ede2, 0xe6dcc8, 0xd8e2dc, 0xf0e2d0, 0xcfd8d0, 0xe9d2c2], jitter: 0.3,
-      keep: (x, z) => shore(x) - z > 385 && H(x, z) < 12 && H(x, z) > 2 && Math.hypot(x - DX, z - DZ) > 640, height: (x, z) => r.range(6, 15) + (r.chance(0.07) ? r.range(25, 60) : 0) });
+      keep: (x, z) => shore(x) - z > 385 && H(x, z) < 12 && H(x, z) > 2 && Math.hypot(x - DX, z - DZ) > 600, height: (x, z) => r.range(6, 15) + (r.chance(0.07) ? r.range(25, 60) : 0) });
     world.add(buildings(town, facadeMat({ floor: 3.3, bay: 3.6, frame: [0.25, 0.28], glass: 0x4a6a80, lit: 0.1, night: 0.5 })), lids(town, 0xd9d4c8));
 
     // ---- palms everywhere, banyans in the park, a white lighthouse at the foot of Diamond Head
@@ -124,6 +123,7 @@ export default {
     for (let i = 0; i < 420; i++) { const x = r.range(-1150, 300), z = shore(x) - r.range(82, 380); if (hotels.every((b) => Math.abs(b.x - x) > b.w / 2 + 3 || Math.abs(b.z - z) > b.d / 2 + 3) && !(Math.abs(x - RX) < 52 && Math.abs(z - RZ + 10) < 40)) palms.push([x, 2.5, z]); }
     for (let i = 0; i < 150; i++) { const x = r.range(300, 640), z = r.range(-420, 0); if (Math.hypot(x - DX, z - DZ) > 560) (r.chance(0.6) ? palms : shady).push([x, H(x, z), z]); }
     for (let i = 0; i < 70; i++) { const x = r.range(-2650, -1250), z = shore(x) - r.range(-10, 90), y = H(x, z); if (y > 1.5 && y < 40) palms.push([x, y, z]); }
+    for (let i = 0; i < 260; i++) { const x = r.range(1150, 1520), z = r.range(-1000, -100), y = H(x, z); if (y > 1.5 && y < 6) palms.push([x, y, z]); }
     for (let i = 0; i < 60; i++) { const a = r() * TAU, q = r.range(0, 190); shady.push([DX + Math.cos(a) * q, H(DX + Math.cos(a) * q, DZ + Math.sin(a) * q), DZ + Math.sin(a) * q]); }
     const scrub = []; for (let i = 0; i < 3400; i++) { const a = r() * TAU, q = 560 * Math.sqrt(r()), x = DX + Math.cos(a) * q, z = DZ + Math.sin(a) * q, y = H(x, z); if (y > 3 && (q < 300 || gully(Math.atan2(z - DZ, DX - x)) < 0.5)) scrub.push({ x, y, z, s: r.range(2, 5.5), sy: r.range(1.4, 3), color: r.pick([0x4f6a30, 0x62783a, 0x3f5a2c, 0x7a8440]) }); }
     world.add(instances(new THREE.IcosahedronGeometry(1, 0), mat(0xffffff, { rough: 0.95, flat: true }), scrub, { cast: false }));

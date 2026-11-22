@@ -1,4 +1,5 @@
-Round 3 (hawaii.js): path moved offshore along the cliffs (waterfall now reads), Diamond Head summit moved to SW rim, gullies/strata/scrub added, crater focus, sea floor deepened (no z-fight), east coast added behind Diamond Head.
-Stats before this round: ~45-85 calls, ~520-570k tris, build 1.5-3.1 s (H() made cheaper this round).
-Weak: Diamond Head outer flank still plain at t~0.67; surf bands are thin; check east of Diamond Head (t 0.8-0.9) for empty land.
-Next: re-shoot 0.6-0.9 and overview, then portal check with --next new-york.
+Round 5 (hawaii.js): path now swings out to sea round Diamond Head (whole cone + lighthouse in frame) before crossing the crater; islet + boats added east; fixed sea-floor bug (floor sat at -0.3 m, showed as grey shelf).
+Stats: 40-90 calls, ~540-590k tris, build ~2.0-2.3 s (shot tool), path 4909 m, duration 50.
+Portal framing checked with --next new-york: ring centred on volcano + rainbow, fine.
+Weak: Diamond Head flank is still fairly smooth; surf bands are flat white wedges; Ko'olau spires blobby.
+Next: final re-shoot to confirm shelf fix, then stop on hawaii and start korea.js.

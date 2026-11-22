@@ -42,10 +42,10 @@ export default {
       fog: { color: 0x7a5a6c, density: 0.00034 }, stars: 200, exposure: 1.12, env: 0.9,
     });
     // x is east, z is south; Hakata Bay lies to the north (z < -300), the Naka river runs north at x = 1130..1200. Land stands 2.5 m above the water.
-    const path = [[-262, 45, -610], [-205, 46, -468], [-150, 50, -330], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 27, 602], [950, 24, 600], [1085, 16, 625], [1152, 9.5, 530], [1146, 9, 300], [1142, 10, 110], [1150, 28, -110]];
+    const path = [[-215, 46, -495], [-150, 50, -330], [-128, 70, -150], [10, 84, -10], [230, 112, 40], [430, 80, 250], [540, 46, 425], [760, 27, 602], [950, 24, 600], [1085, 16, 625], [1152, 10, 530], [1146, 9.5, 300], [1142, 10.5, 110], [1150, 28, -110]];
     const TOWER = [-60, -160], DOME = [260, -40], CASTLE = [570, 365], SHRINE = [900, 558], G = 2.5;
-    const focus = [[0.08, TOWER[0], 120, TOWER[1]], [0.2, TOWER[0], 120, TOWER[1]], [0.29, DOME[0], 40, DOME[1]], [0.37, DOME[0], 40, DOME[1]], [0.45, 610, 20, 345], [0.52, 610, 20, 345], [0.58, 880, 8, 556], [0.67, 950, 8, 556], [0.74, 1122, 5, 440], [0.8, 1122, 5, 260]];
-    const clear = clearance(path);
+    const focus = [[0.08, TOWER[0], 125, TOWER[1]], [0.15, TOWER[0], 125, TOWER[1]], [0.22, DOME[0], 40, DOME[1]], [0.31, DOME[0], 40, DOME[1]], [0.39, 610, 20, 345], [0.47, 610, 20, 345], [0.54, 860, 8, 556], [0.65, 950, 8, 556], [0.73, 1122, 5, 470], [0.8, 1122, 5, 300]];
+    const clear = clearance(path), shade = (o) => { o.traverse((c) => { c.userData.shade = true; }); return o; };
 
     // ---- sea, river and land
     water(world, 0, { size: [9400, 4700], z: -2650, color: 0x2b3a55, rough: 0.16, strength: 0.22, ripple: 130 });
@@ -65,7 +65,7 @@ export default {
       g.add(tri(15, 17, 150, mirror, 0), tri(15.5, 15.5, 7, glowMat(0xffe2a8, 1.5), 116), tri(3.5, 15, 22, mirror, 150), tri(1, 3.5, 60, steel, 172), sphere(1.3, glowMat(0xff3020, 4, { toneMapped: false }), 0, 233, 0));
       g.add(mesh(new THREE.CylinderGeometry(40, 44, 9, 3).translate(0, 4.5, 0), mat(0x8c98a4, { rough: 0.3, metal: 0.6, flat: true })));
       for (let k = 0; k < 3; k++) { const a = k * PI * 2 / 3; g.add(beam([Math.sin(a) * 17.2, 9, Math.cos(a) * 17.2], [Math.sin(a) * 15.2, 150, Math.cos(a) * 15.2], 0.7, edge)); }
-      g.rotation.y = PI; g.position.set(x, G, z); world.add(g);
+      g.rotation.y = PI; g.position.set(x, G, z); world.add(shade(g));
       // the evening illumination: a river of lights up the seaward face
       const dots = []; for (let i = 0; i < 90; i++) { const y = 14 + i * 1.1 + r.range(0, 1), w = 5 + 4 * Math.sin(i * 0.21); dots.push([x + r.range(-w, w), G + y, z - 9.2]); }
       lights(world, dots, { color: [0xfff0c0, 0xffffff, 0xa0e0ff, 0xffc0e0], size: 2.6, power: 1.4 });
@@ -84,12 +84,12 @@ export default {
       const roof = mat(0xffffff, { rough: 0.32, metal: 0.75 }); roof.map = roofTex;
       const wall = facadeMat({ color: 0xc4c8cc, round: 107, floor: 7, bay: 8, frame: [0.2, 0.3], glass: 0x2a3440, lit: 0.6, litColor: 0xffd9a0, night: 1.3 });
       g.add(mesh(new THREE.SphereGeometry(Rs, 72, 14, 0, PI * 2, 0, Math.asin(R / Rs)).translate(0, rise - Rs, 0), roof, 0, 28, 0), cyl(107, 107, 28, wall, 0, 0, 0, 72), cyl(110, 112, 4, mat(0x9aa0a6), 0, 26, 0, 72), cyl(9, 9, 2, mat(0x8a9098, { metal: 0.6, rough: 0.4 }), 0, 83.4, 0, 20));
-      g.position.set(x, G, z); world.add(g);
+      g.position.set(x, G, z); world.add(shade(g));
       const rim = []; for (let i = 0; i < 60; i++) { const a = i / 60 * PI * 2; rim.push([x + Math.cos(a) * 112, G + 31, z + Math.sin(a) * 112]); }
       lights(world, rim, { color: 0xfff0d0, size: 5, power: 1.2 });
       const sg = sign('PayPay ドーム', 11, { color: '#ffffff', bg: '#d6202c', glow: 1.6, pad: 0.35 }); sg.position.set(x - 96, G + 17, z - 62); sg.rotation.y = -2.15; world.add(sg);
-      const hotel = facadeMat({ color: 0xb9c2cc, floor: 3.6, bay: 3, frame: [0.1, 0.2], glass: 0x26384c, lit: 0.55, litColor: 0xffe0b0, night: 1.4, rough: 0.4, metal: 0.3 });
-      world.add(box(28, 138, 96, hotel, 455, G, -175), cyl(14, 14, 138, facadeMat({ color: 0xb9c2cc, round: 14, floor: 3.6, bay: 3, frame: [0.1, 0.2], glass: 0x26384c, lit: 0.55, litColor: 0xffe0b0, night: 1.4, rough: 0.4, metal: 0.3 }), 455, G, -223, 24), box(60, 26, 70, hotel, 418, G, -150));
+      const hotel = facadeMat({ color: 0xb9c2cc, floor: 3.6, bay: 3, frame: [0.1, 0.2], glass: 0x26384c, lit: 0.4, litColor: 0xffe0b0, night: 1.1, rough: 0.4, metal: 0.3 });
+      world.add(box(28, 138, 96, hotel, 455, G, -175), cyl(14, 14, 138, facadeMat({ color: 0xb9c2cc, round: 14, floor: 3.6, bay: 3, frame: [0.1, 0.2], glass: 0x26384c, lit: 0.4, litColor: 0xffe0b0, night: 1.1, rough: 0.4, metal: 0.3 }), 455, G, -223, 24), box(60, 26, 70, hotel, 418, G, -150));
     }
 
     // ---- Marizon: the pier off Momochi beach with its gabled halls
@@ -111,7 +111,7 @@ export default {
       for (const [dx, dz, w, d, y, h] of [[0, 0, 210, 130, 0, 9], [18, -8, 130, 84, 9, 8], [52, -22, 46, 38, 17, 9], [-120, 30, 60, 60, 0, 6]]) b.add(mesh(ishigaki(w, d, h, h * 0.42), stone, x + dx, G + y, z + dz), box(w - h * 0.84 - 3, 0.3, d - h * 0.84 - 3, grass, x + dx, G + y + h, z + dz));
       // turret on the corner of the upper tier, long storehouse on the lower
       b.add(box(20, 6, 10, plaster, x + 52, G + 26, z - 22), box(10, 4.5, 7, plaster, x + 52, G + 34.6, z - 22), box(44, 5, 8, plaster, x - 52, G + 9, z - 48));
-      world.add(...b.build(), hipRoof(26, 15, 4, tile, x + 52, G + 32, z - 22, { ridge: 0.6 }), hipRoof(15, 11, 3.6, tile, x + 52, G + 39, z - 22, { ridge: 0.4 }), hipRoof(50, 12, 3.4, tile, x - 52, G + 14, z - 48, { ridge: 0.8 }));
+      world.add(...b.build().map(shade), hipRoof(26, 15, 4, tile, x + 52, G + 32, z - 22, { ridge: 0.6 }), hipRoof(15, 11, 3.6, tile, x + 52, G + 39, z - 22, { ridge: 0.4 }), hipRoof(50, 12, 3.4, tile, x - 52, G + 14, z - 48, { ridge: 0.8 }));
       for (let i = 0; i < 130; i++) { const px = x + r.range(-150, 130), pz = z + r.range(-95, 100), dx = px - x, dz = pz - z, y = Math.abs(dx - 18) < 50 && Math.abs(dz + 8) < 30 ? 17 : Math.abs(dx) < 92 && Math.abs(dz) < 52 ? 9 : Math.abs(dx) > 112 || Math.abs(dz) > 72 ? 0 : -1; if (y >= 0 && !(Math.abs(dx - 52) < 30 && Math.abs(dz + 22) < 24) && clear(px, pz, 30) > G + y + 34) (r.chance(0.3) ? pines : greens).push([px, G + y, pz]); }
       const pond = water(world, G + 0.15, { size: [1, 1], x: 290, z: 420, color: 0x2a3550, ripple: 50, strength: 0.25 }); pond.geometry = new THREE.CircleGeometry(1, 40).rotateX(-PI / 2).scale(120, 1, 95); pond.material.normalMap.repeat.set(4, 4);
       world.add(cyl(14, 16, 1.6, grass, 290, G, 420, 16), box(3, 0.5, 96, mat(0x8a8176), 290, G + 0.6, 372));
@@ -134,7 +134,7 @@ export default {
       b.add(box(26, 1.2, 34, stone, x + 44, G, z), box(18, 6.2, 24, white, x + 44, G + 1.2, z), box(18.6, 0.6, 24.6, red, x + 44, G + 6.8, z), box(8, 5, 12, white, x + 60, G + 1.2, z), box(5, 0.4, 9, gold, x + 34.6, G + 3, z));
       for (let i = 0; i < 7; i++) b.add(box(0.6, 6.2, 0.6, red, x + 34.7, G + 1.2, z - 12 + i * 4), box(0.6, 6.2, 0.6, red, x + 53.3, G + 1.2, z - 12 + i * 4));
       for (const e of [-1, 1]) b.add(box(46, 4, 2.4, white, x + 7, G, z + e * 24), box(46, 0.5, 4, red, x + 7, G + 4, z + e * 24), box(2.4, 4, 17, white, x - 16, G, z + e * 15.5));
-      world.add(...b.build());
+      world.add(...b.build().map(shade));
       world.add(hipRoof(13, 21, 3, bark, x - 16, G + 7, z, { ridge: 0.3, curve: 1.4, lift: 1.2 }), hipRoof(12, 20, 5, bark, x - 16, G + 14, z, { ridge: 0.35, curve: 1.9, lift: 1.6 }));
       world.add(hipRoof(30, 38, 9.5, bark, x + 44, G + 7.4, z, { ridge: 0.3, curve: 1.9, lift: 2.6 }), hipRoof(13, 17, 4.5, bark, x + 60, G + 6.2, z, { ridge: 0.3, curve: 1.7, lift: 1.2 }), hipRoof(50, 5, 1.6, bark, x + 7, G + 4.5, z - 24, { ridge: 0.9 }), hipRoof(50, 5, 1.6, bark, x + 7, G + 4.5, z + 24, { ridge: 0.9 }));
       // stone lanterns along the approach, paper lanterns under the gate
@@ -154,26 +154,27 @@ export default {
 
     // ---- the yatai: a long row of food stalls on the west bank, lanterns, noren, steam, customers on their stools
     {
-      const X = 1120, K = 1.5, wood = mat(0x3a2a20, { rough: 0.9 }), stalls = [], roofs = [], lanterns = [], people = [], warm = [], redDots = [], noren = [], shops = ['ラーメン', 'おでん', '焼き鳥', '天ぷら', '餃子', 'もつ鍋', '博多屋台', '明太子'];
+      const X = 1119, K = 1.5, wood = mat(0x3a2a20, { rough: 0.9 }), stalls = [], roofs = [], lanterns = [], people = [], warm = [], redDots = [], noren = [], shops = ['ラーメン', 'おでん', '焼き鳥', '天ぷら', '餃子', 'もつ鍋', '博多屋台', '明太子'];
       const atlas = paint(512, 512, (c) => { shops.forEach((t, i) => { c.fillStyle = ['#b3221c', '#1f2f6a', '#f2ead8', '#7a1c18', '#274a3a', '#b3221c', '#f2ead8', '#1f2f6a'][i]; c.fillRect(0, i * 64, 512, 64); c.fillStyle = i === 2 || i === 6 ? '#8a1a14' : '#fff6e0'; c.font = '700 46px "Noto Sans CJK JP","WenQuanYi Zen Hei",sans-serif'; c.textBaseline = 'middle'; c.textAlign = 'center'; [...t].forEach((ch, k, a) => c.fillText(ch, 512 * (k + 0.5) / a.length, i * 64 + 34)); c.fillStyle = 'rgba(0,0,0,0.35)'; for (let k = 1; k < 4; k++) c.fillRect(k * 128 - 1, i * 64 + 20, 2, 44); }); });
+      // one stall, front towards +X: posts, counter, back and side boards
       const frame = mergeGeometries([...[[-1.6, -2.6], [-1.6, 2.6], [1.6, -2.6], [1.6, 2.6]].map(([a, c]) => new THREE.BoxGeometry(0.14, 2.6, 0.14).translate(a, 1.3, c)), new THREE.BoxGeometry(0.7, 1, 5.2).translate(1.15, 0.5, 0), new THREE.BoxGeometry(0.12, 2.5, 5.4).translate(-1.65, 1.25, 0), new THREE.BoxGeometry(3.2, 1.1, 0.12).translate(0, 0.55, -2.65), new THREE.BoxGeometry(3.2, 1.1, 0.12).translate(0, 0.55, 2.65)]);
       for (let z = 548, i = 0; z > 76; z -= 14.5, i++) {
-        stalls.push({ x: X, y: G, z }); roofs.push({ x: X + 0.2, y: G + 2.6, z, rz: -0.07, color: r.pick([0xb3261e, 0x1f3a7a, 0xe8e0cc, 0x2a5a40, 0xc8a030]) });
-        const row = i % shops.length, pg = new THREE.PlaneGeometry(5, 0.95).rotateY(PI / 2).translate(X + 1.75, G + 2.1, z), uv = pg.attributes.uv; for (let k = 0; k < 4; k++) uv.setY(k, 1 - (row + 1 - uv.getY(k)) / 8); noren.push(pg);
-        for (const e of [-1, 1]) { lanterns.push({ x: X + 1.9, y: G + 1.75, z: z + e * 2.95, s: 1 }); redDots.push([X + 2, G + 1.75, z + e * 2.95]); }
-        lanterns.push({ x: X + 2.1, y: G + 2.0, z: z + 3.9, s: 1.7 }); redDots.push([X + 2.2, G + 2, z + 3.9]); warm.push([X + 0.6, G + 1.7, z]);
-        for (let k = 0; k < 5; k++) if (r.chance(0.8)) people.push({ x: X + 2.15 + r.range(-0.1, 0.2), y: G, z: z - 2.1 + k * 1.05, sx: 0.5, sy: r.range(1.15, 1.4), sz: 0.42, color: r.pick([0x1c1c24, 0x2a2430, 0x3a3038, 0x20283a, 0x4a3a34]) });
-        if (r.chance(0.5)) people.push({ x: X + r.range(4, 6.5), y: G, z: z + r.range(-6, 6), sx: 0.5, sy: 1.65, sz: 0.4, color: 0x22222a });
+        stalls.push({ x: X, y: G, z, s: K }); roofs.push({ x: X + 0.3, y: G + 2.6 * K, z, s: K, rz: -0.07, color: r.pick([0xb3261e, 0x1f3a7a, 0xe8e0cc, 0x2a5a40, 0xc8a030]) });
+        const row = i % shops.length, pg = new THREE.PlaneGeometry(5 * K, 0.95 * K).rotateY(PI / 2).translate(X + 1.75 * K, G + 2.1 * K, z), uv = pg.attributes.uv; for (let k = 0; k < 4; k++) uv.setY(k, 1 - (row + 1 - uv.getY(k)) / 8); noren.push(pg);
+        for (const e of [-1, 1]) { lanterns.push({ x: X + 1.9 * K, y: G + 1.75 * K, z: z + e * 2.95 * K, s: K }); redDots.push([X + 2 * K, G + 1.75 * K, z + e * 2.95 * K]); }
+        lanterns.push({ x: X + 2.1 * K, y: G + 2 * K, z: z + 5.4, s: 2.6 }); redDots.push([X + 2.2 * K, G + 2 * K, z + 5.4]); warm.push([X + 1, G + 2.4, z]);
+        for (let k = 0; k < 5; k++) if (r.chance(0.8)) people.push({ x: X + 2.15 * K + r.range(-0.1, 0.2), y: G, z: z - 3.1 + k * 1.55, sx: 0.6, sy: r.range(1.5, 1.8), sz: 0.5, color: r.pick([0x1c1c24, 0x2a2430, 0x3a3038, 0x20283a, 0x4a3a34]) });
+        if (r.chance(0.6)) people.push({ x: X + r.range(5.5, 8.5), y: G, z: z + r.range(-6, 6), sx: 0.55, sy: 1.75, sz: 0.45, color: 0x22222a });
       }
-      world.add(instances(frame, wood, stalls), instances(new THREE.BoxGeometry(4.2, 0.14, 6.2), mat(0xffffff, { rough: 0.8 }), roofs), instances(new THREE.BoxGeometry(0.08, 1.9, 5.2).translate(-1.55, 1.35, 0), glowMat(0xffc070, 1.6, { toneMapped: false }), stalls, { cast: false }), instances(new THREE.BoxGeometry(0.72, 0.06, 5.2).translate(1.15, 1.04, 0), glowMat(0xffd9a0, 1.1), stalls, { cast: false }));
-      world.add(instances(new THREE.SphereGeometry(0.3, 10, 8).scale(1, 1.3, 1), glowMat(0xff3418, 2, { toneMapped: false }), lanterns, { cast: false }), instances(UNIT(), mat(0xffffff, { rough: 0.9 }), people), mesh(mergeGeometries(noren), glowMat(0xffffff, 1.25, { map: atlas, side: THREE.DoubleSide }), 0, 0, 0, { cast: false }));
-      lights(world, redDots, { color: 0xff4020, size: 2.6, power: 1.3 }); lights(world, warm, { color: 0xffb060, size: 11, power: 0.75 });
+      world.add(instances(frame, wood, stalls, { cast: false }), instances(new THREE.BoxGeometry(4.2, 0.14, 6.2), mat(0xffffff, { rough: 0.8 }), roofs, { cast: false }), instances(mergeGeometries([new THREE.BoxGeometry(0.08, 1.9, 5.2).translate(-1.55, 1.35, 0), new THREE.BoxGeometry(0.72, 0.06, 5.2).translate(1.15, 1.04, 0)]), glowMat(0xffc070, 1.6, { toneMapped: false }), stalls, { cast: false }));
+      world.add(instances(new THREE.SphereGeometry(0.3, 10, 8).scale(1, 1.3, 1), glowMat(0xff3418, 2, { toneMapped: false }), lanterns, { cast: false }), instances(UNIT(), mat(0xffffff, { rough: 0.9 }), people, { cast: false }), mesh(mergeGeometries(noren), glowMat(0xffffff, 1.25, { map: atlas, side: THREE.DoubleSide }), 0, 0, 0, { cast: false }));
+      lights(world, redDots, { color: 0xff4020, size: 4, power: 1.3 }); lights(world, warm, { color: 0xffb060, size: 16, power: 0.8 });
       // steam curling up from the pots
-      const n = stalls.length * 4, sp = new Float32Array(n * 3), steam = lights(world, sp, { color: 0xfff0e0, size: 2.4, power: 0.22 });
-      world.onUpdate((t) => { for (let i = 0; i < n; i++) { const s = stalls[i >> 2], u = (t * 0.22 + i * 0.37) % 1; sp[i * 3] = s.x + 0.4 + Math.sin(t * 0.7 + i) * 0.5 * u + u * 1.2; sp[i * 3 + 1] = G + 2.9 + u * 5.5; sp[i * 3 + 2] = s.z + ((i & 3) - 1.5) * 1.1 + Math.cos(t * 0.5 + i * 2) * 0.6 * u; } steam.geometry.attributes.position.needsUpdate = true; });
-      // promenade: paving, a string of bulbs along the river rail, the buildings behind the stalls
-      world.add(box(22, 0.2, 520, mat(0x4a4642, { rough: 0.8, emissive: 0xff9a50, glow: 0.1 }), 1119, G, 315, { cast: false }));
-      const bulbs = []; for (let z = 560; z > 60; z -= 3.2) bulbs.push([1129.4, G + 1.3, z]); lights(world, bulbs, { color: 0xffe0a0, size: 1.3, power: 1.2 });
+      const n = stalls.length * 4, sp = new Float32Array(n * 3), steam = lights(world, sp, { color: 0xfff0e0, size: 3.4, power: 0.22 });
+      world.onUpdate((t) => { for (let i = 0; i < n; i++) { const st = stalls[i >> 2], u = (t * 0.22 + i * 0.37) % 1; sp[i * 3] = st.x + 0.6 + Math.sin(t * 0.7 + i) * 0.7 * u + u * 1.6; sp[i * 3 + 1] = G + 4.3 + u * 7; sp[i * 3 + 2] = st.z + ((i & 3) - 1.5) * 1.6 + Math.cos(t * 0.5 + i * 2) * 0.8 * u; } steam.geometry.attributes.position.needsUpdate = true; });
+      // promenade: paving, a string of bulbs along the river rail
+      world.add(box(24, 0.2, 520, mat(0x5a544e, { rough: 0.8, emissive: 0xff9a50, glow: 0.14 }), 1118, G, 315, { cast: false }));
+      const bulbs = []; for (let z = 560; z > 60; z -= 3.2) bulbs.push([1129.4, G + 1.4, z]); lights(world, bulbs, { color: 0xffe0a0, size: 1.5, power: 1.2 });
     }
 
     // ---- Nakasu across the river: neon-fronted buildings, and their mirror image under the see-through water
@@ -183,8 +184,8 @@ export default {
       const row = []; let i = 0;
       for (let z = 640; z > 20; ) {
         const w = r.range(22, 34), h = r.range(24, 52); z -= w / 2; row.push({ x: 1224, z, w: 34, d: w - 1.5, h, y: G, color: r.pick([0x4a4650, 0x5a5660, 0x3e3c48, 0x66606a]) });
-        for (const off of w > 27 ? [-w / 4, w / 4] : [0]) { const t = words[i++ % words.length], c = r.pick(NEON), inv = r.chance(0.4), sh = Math.min(h - 6, t.length * 4.6 + 2), sg = sign(t, sh, { vertical: true, color: inv ? '#fff' : c, bg: inv ? (c === '#ffffff' ? '#c01030' : c) : '#12060e', glow: 2.2, pad: 0.2 }); sg.position.set(1206.5, G + r.range(5, h - sh - 1) + sh / 2, z + off); sg.rotation.y = -PI / 2; nakasu.add(sg); }
-        if (h > 40) { const t = words[i++ % words.length], sg = sign(t, 7, { color: r.pick(NEON), bg: null, glow: 2.4 }); sg.position.set(1207.5, G + h + 4.5, z); sg.rotation.y = -PI / 2; nakasu.add(sg); }
+        for (const off of [0]) { const t = words[i++ % words.length], c = r.pick(NEON), inv = r.chance(0.4), sh = Math.min(h - 6, t.length * 4.6 + 2), sg = sign(t, sh, { vertical: true, color: inv ? '#fff' : c, bg: inv ? (c === '#ffffff' ? '#c01030' : c) : '#12060e', glow: 2.2, pad: 0.2 }); sg.position.set(1206.5, G + r.range(5, h - sh - 1) + sh / 2, z + off); sg.rotation.y = -PI / 2; nakasu.add(sg); }
+        if (h > 44) { const t = words[i++ % words.length], sg = sign(t, 7, { color: r.pick(NEON), bg: null, glow: 2.4 }); sg.position.set(1207.5, G + h + 4.5, z); sg.rotation.y = -PI / 2; nakasu.add(sg); }
         z -= w / 2;
       }
       nakasu.add(buildings(row, facadeMat({ floor: 3.6, bay: 3, frame: [0.24, 0.28], glass: 0x14141c, lit: 0.6, litColor: 0xffc890, night: 1.5 }), { cast: false }));
@@ -204,7 +205,7 @@ export default {
     });
     lots.forEach((b) => { b.y = G; });
     world.add(buildings(lots, facadeMat({ floor: 3.3, bay: 3, frame: [0.26, 0.3], glass: 0x1c222c, lit: 0.5, litColor: 0xffcf90, night: 1.35, rough: 0.85 }), { cast: false }));
-    const backs = []; for (let z = 560; z > 70; z -= 26) backs.push({ x: 1093, z, w: 26, d: 24, h: r.range(14, 26), y: G, color: r.pick([0x8a8680, 0x9a948c, 0x76726c]) });
+    const backs = []; for (let z = 560; z > 70; z -= 26) backs.push({ x: 1090, z, w: 26, d: 24, h: r.range(14, 26), y: G, color: r.pick([0x8a8680, 0x9a948c, 0x76726c]) });
     world.add(buildings(backs, facadeMat({ floor: 3.3, bay: 3, frame: [0.26, 0.3], glass: 0x1c222c, lit: 0.6, litColor: 0xffcf90, night: 1.4 }), { cast: false }));
 
     // ---- the urban expressway on its piers, street traffic, Hakata Port Tower at the river mouth
@@ -222,7 +223,7 @@ export default {
     }
 
     // ---- trees: pines and broadleaf round the castle and shrine, palms on the beach
-    trees(world, greens, 'round', { size: 11, color: [0x2f4a2c, 0x3a5632, 0x44603a, 0x56602c], rand: r }); trees(world, pines, 'conifer', { size: 15, rand: r });
+    shade(trees(world, greens, 'round', { size: 11, color: [0x2f4a2c, 0x3a5632, 0x44603a, 0x56602c], rand: r })); shade(trees(world, pines, 'conifer', { size: 15, rand: r }));
     trees(world, Array.from({ length: 42 }, (_, i) => [-415 + i * 16, G, -222 + (i % 2) * 5]), 'palm', { size: 11, rand: r });
 
     // ---- Hakata Bay: ferries with their lights on, the long sandbar of Umi-no-Nakamichi, hills against the afterglow
@@ -239,6 +240,7 @@ export default {
       world.add(instances(new THREE.ConeGeometry(1, 1, 9).translate(0, 0.5, 0), mat(0x2c3048, { rough: 1 }), hills, { cast: false, receive: false }));
     }
 
+    world.scene.traverse((o) => { if (!o.userData.shade) o.castShadow = false; });
     return { world, path, focus, duration: 50 };
   },
 };
