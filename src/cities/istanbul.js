@@ -16,14 +16,14 @@ export default {
     const r = rng(1453);
     const world = createWorld({
       sky: { top: 0x35549c, horizon: 0xffb25e, bottom: 0x6a5a58, haze: 0.5 },
-      sun: { dir: [-0.85, 0.13, 0.45], color: 0xffb070, power: 3.0, disc: 0xffd9a0, size: 0.002 },
+      sun: { dir: [-0.85, 0.13, 0.45], color: 0xffb070, power: 3.0, disc: 0xffc888, size: 0.0013 },
       ambient: { sky: 0x8a9ad0, ground: 0x6a4a38, power: 0.85 },
       fog: { color: 0xe6a878, density: 0.00033 }, exposure: 1.0, env: 0.9,
     });
     // x is east, z is south. The old city is the peninsula in the south-west, Galata lies north across the Golden Horn, Asia east across the Bosphorus.
-    const path = [[980, 56, 420], [420, 70, 280], [100, 96, 238], [-200, 100, 235], [-195, 96, 60], [0, 80, -100], [60, 72, -470], [-20, 100, -660], [50, 104, -790], [250, 90, -760], [620, 60, -600], [900, 46, -420], [960, 40, -230], [880, 38, -90], [700, 36, 40]];
-    const HAGIA = [-20, 140], BLUE = [-150, 372], GALATA = [60, -700], MAIDEN = [830, -250], BRIDGE = [1135, -1250];
-    const focus = [[0.08, BLUE[0], 60, BLUE[1]], [0.16, BLUE[0], 66, BLUE[1]], [0.24, HAGIA[0], 66, HAGIA[1]], [0.33, HAGIA[0], 62, HAGIA[1]], [0.4, 170, 40, -30], [0.48, GALATA[0], 70, GALATA[1]], [0.6, GALATA[0], 75, GALATA[1]], [0.67, BRIDGE[0], 70, BRIDGE[1]], [0.75, MAIDEN[0], 14, MAIDEN[1]], [0.8, MAIDEN[0], 14, MAIDEN[1]]];
+    const path = [[980, 56, 420], [420, 70, 290], [100, 92, 262], [-200, 98, 258], [-200, 96, 60], [0, 80, -100], [60, 72, -470], [-20, 100, -660], [50, 104, -790], [250, 90, -760], [620, 60, -600], [880, 46, -400], [930, 40, -200], [845, 37, -65], [700, 36, 40]];
+    const HAGIA = [-20, 140], BLUE = [-150, 372], GALATA = [60, -700], MAIDEN = [535, 62], BRIDGE = [1135, -1250];
+    const focus = [[0.08, BLUE[0], 60, BLUE[1]], [0.2, BLUE[0], 66, BLUE[1]], [0.27, HAGIA[0], 66, HAGIA[1]], [0.34, HAGIA[0], 62, HAGIA[1]], [0.4, 170, 40, -30], [0.48, GALATA[0], 70, GALATA[1]], [0.6, GALATA[0], 75, GALATA[1]], [0.67, BRIDGE[0], 70, BRIDGE[1]], [0.74, BRIDGE[0], 70, BRIDGE[1]]];
     const clear = clearance(path);
 
     // ---- the lie of the land: three shores round the water, hills behind them
@@ -36,7 +36,7 @@ export default {
       if (a === L) h = lerp(h, 34, smooth(270, 150, Math.hypot(x + 70, z - 255)));
       return Math.min(L * 0.12, 5) + h * smooth(0, 130, L);
     };
-    const land = terrain({ size: 6600, seg: 330, center: [300, -200], height, rough: 1, color: (x, y, z, slope) => (y < 0.4 ? 0x6a6a58 : y < 3 ? 0xa89a80 : slope > 0.12 ? 0x7a6a50 : fbm(x / 90, z / 90, 2) > 0.52 ? 0x8a8062 : 0x9a8a68) });
+    const land = terrain({ size: 6600, seg: 264, center: [300, -200], height, rough: 1, color: (x, y, z, slope) => (y < 0.4 ? 0x7a7a66 : y < 3 ? 0xc0b090 : slope > 0.12 ? 0x9a8862 : fbm(x / 90, z / 90, 2) > 0.52 ? 0x8f9468 : 0xb09c74) });
     world.add(land); water(world, 0, { color: 0x3c5a78, rough: 0.2, strength: 0.4, ripple: 110 });
 
     // ---- mosque parts shared by every mosque in the city: lead domes, pencil minarets, stone blocks
@@ -52,7 +52,7 @@ export default {
     {
       const [x, z] = HAGIA, y = height(x, z) - 0.5, ROSE = 0xc88a6c, OCHRE = 0xd2a06e;
       block(x, y, z, 74, 24, 70, ROSE); block(x, y + 24, z, 46, 10, 46, OCHRE); block(x - 43, y, z, 12, 16, 62, ROSE); block(x - 52, y, z, 8, 10, 54, OCHRE);
-      for (const s of [-1, 1]) for (const e of [-1, 1]) { block(x + s * 15, y, z + e * 39, 10, 31, 13, OCHRE); block(x + s * 15, y + 31, z + e * 37, 8, 4, 9, ROSE); dome(x + s * 31, y + 22, z + e * 17, 7.5); minaret(x + s * 45, y, z + e * 41, 58, s === 1 && e === 1 ? 0xb8674a : 0xe6dfd0); }
+      for (const s of [-1, 1]) for (const e of [-1, 1]) { block(x + s * 15, y, z + e * 39, 10, 27, 13, OCHRE); block(x + s * 15, y + 27, z + e * 37, 8, 4, 9, ROSE); dome(x + s * 31, y + 22, z + e * 17, 7.5); minaret(x + s * 45, y, z + e * 41, 58, s === 1 && e === 1 ? 0xb8674a : 0xe6dfd0); }
       world.add(cyl(16.8, 16.8, 3.5, facadeMat({ color: OCHRE, round: 16.8, floor: 3.5, bay: 2.64, frame: [0.3, 0.2], glass: 0x2a2018, lit: 0 }), x, y + 34, z, 40), cyl(8, 8, 20, mat(ROSE), x + 38, y, z, 16));
       dome(x, y + 37.5, z, 16.4, 0.62); dome(x - 22, y + 24, z, 15.5, 0.85); dome(x + 22, y + 24, z, 15.5, 0.85); dome(x + 38, y + 20, z, 8.2, 0.7);
       world.add(cyl(0.25, 0.6, 5, mat(0xd9b040, { metal: 0.8, rough: 0.3 }), x, y + 47.5, z, 6));
@@ -109,12 +109,12 @@ export default {
       const paintG = (g, c) => { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set(c, i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
       const house = mergeGeometries([paintG(new THREE.BoxGeometry(1, 0.72, 1).translate(0, 0.36, 0).toNonIndexed(), [1, 1, 1]), paintG(new THREE.ConeGeometry(0.76, 0.3, 4).rotateY(PI / 4).translate(0, 0.87, 0).toNonIndexed(), [0.78, 0.3, 0.2])]);
       const near = [], far = [], walls = [0xf0e2cc, 0xe2caa6, 0xf6eee0, 0xd6bc98, 0xe8d2b8, 0xd9c8b4, 0xf0d8b0];
-      for (let i = 0; i < 26000 && near.length + far.length < 8200; i++) {
-        const x = r.range(-2700, 3200), z = r.range(-3000, 1100), a = Lold(x, z), L = Math.max(a, Lgal(x, z), Lasia(x, z)); if (L < 22) continue;
+      for (let i = 0; i < 60000 && near.length + far.length < 13000; i++) {
+        const wide = i % 4 === 0, x = wide ? r.range(-2700, 3200) : r.range(-1500, 1700), z = wide ? r.range(-3000, 1100) : r.range(-1500, 900), a = Lold(x, z), L = Math.max(a, Lgal(x, z), Lasia(x, z)); if (L < 22) continue;
         if (a === L && ((x > 30 && x < 310 && z > -200 && z < 120) || (Math.hypot(x - HAGIA[0], z - HAGIA[1]) < 85) || (Math.abs(x - BLUE[0] + 28) < 92 && Math.abs(z - BLUE[1]) < 60) || (x > -260 && x < 90 && z > 190 && z < 300))) continue;
         if (Math.hypot(x - GALATA[0], z - GALATA[1]) < 22 || (Math.abs(z - BRIDGE[1]) < 34)) continue;
-        const y = height(x, z), h = r.range(7, 15) + (r.chance(0.08) ? 10 : 0); if (clear(x, z, 34) < y + h + 26) continue;
-        (clear(x, z, 420) < 1e9 ? near : far).push({ x, y: y - 1.5, z, sx: r.range(8, 15), sy: h + 1.5, sz: r.range(8, 15), ry: r.range(0, 1.6), color: r.pick(walls) });
+        const y = height(x, z), h = r.range(8, 16) + (r.chance(0.08) ? 10 : 0); if (clear(x, z, 34) < y + h + 26) continue;
+        (clear(x, z, 240) < 1e9 ? near : far).push({ x, y: y - 1.5, z, sx: r.range(10, 18), sy: h + 1.5, sz: r.range(10, 18), ry: r.range(0, 1.6), color: r.pick(walls) });
       }
       const hm = mat(0xffffff, { rough: 0.9, vertexColors: true, flat: true });
       world.add(instances(house, hm, near), instances(house, hm, far, { cast: false }));
@@ -122,7 +122,7 @@ export default {
 
     // ---- build the shared mosque parts
     world.add(instances(new THREE.SphereGeometry(1, 20, 8, 0, PI * 2, 0, PI / 2), mat(LEAD, { rough: 0.45, metal: 0.35 }), domes), instances(minaretGeo, mat(0xffffff, { rough: 0.8 }), minarets));
-    world.add(instances(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), facadeMat({ floor: 7, bay: 5, frame: [0.36, 0.3], glass: 0x2a2018, lit: 0.25, litColor: 0xffd9a0, night: 0.7, rough: 0.9 }), blocks.map((b) => ({ x: b.x, y: b.y, z: b.z, sx: b.w, sy: b.h, sz: b.d, color: b.color }))));
+    world.add(instances(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), facadeMat({ floor: 9, bay: 6, frame: [0.42, 0.37], glass: 0x3a2c22, lit: 0.25, litColor: 0xffd9a0, night: 0.7, rough: 0.9 }), blocks.map((b) => ({ x: b.x, y: b.y, z: b.z, sx: b.w, sy: b.h, sz: b.d, color: b.color }))));
     lights(world, minarets.map((m) => [m.x, m.y + m.sy * 0.69, m.z]), { color: 0xffe0a0, size: 3.5, power: 1 });
     trees(world, cypress, 'cypress', { size: 15, rand: r }); trees(world, greens, 'round', { size: 10, color: [0x4a6a3a, 0x5a7a40, 0x3e5e34], rand: r });
 

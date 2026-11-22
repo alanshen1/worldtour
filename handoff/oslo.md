@@ -1,5 +1,5 @@
-Round 2 done (oslo.js). Built: Opera House (sloping marble wedges into the fjord, glowing foyer, fly tower, walkers), Barcode row (16 slim towers, 4 facade types), moving train, leaning Munch tower, City Hall twin towers + clock, Akershus on its rock, Holmenkollen jump floodlit on the hill, ferries, snowy town with lit windows, faint aurora, mirrored reflections.
-Round 2: Opera x1.25, path raised over the roof, aurora dimmer, smaller quay lamps, lit fortress windows, last point nudged. Verified 0.2/0.26/0.58/0.93; portal sits over the town in front of Holmenkollen and the aurora.
-Stats (--next none): ~86 calls / 215k tris / build ~1970 ms, path 3321 m, duration 46.
-Still weak: only two rounds; the roof pass is close to the fly tower and the foyer glass is a flat pattern; Akershus rock is coarse; Holmenkollen is small/far; town blocks are plain boxes.
-Next: third round on Opera detail (roof ramps, marble joints), fortress rock, a nearer Holmenkollen view.
+Round 3 (oslo.js): Opera reworked so it reads. New approach: straight in over the water at 12-30 m facing the Opera front for the first ~27% of the flight, then up the east roof ramp (>= 65 m from the fly tower), Barcode, Munch, and a second frontal pass at u~0.58.
+Opera changes: floodlit marble, splayed outer ramp edges, brighter glowing foyer with fine mullions, taller two-stage glazed fly tower (top ~56 m), 170 walkers, dark swept paving round it for contrast.
+Stats (--next none): ~90 calls / 219k tris / build ~1930 ms, path 3293 m, duration 46.
+Verified t=0.15/0.22/0.28/0.33/0.58: Opera central and recognisable with reflection; portal framing unchanged (over town toward Holmenkollen).
+Still weak: walkers are blocky up close; Akershus rock coarse; Holmenkollen small/far; town plain.

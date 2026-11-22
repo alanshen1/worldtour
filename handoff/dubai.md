@@ -1,4 +1,5 @@
-Dubai — round 2
-- Round 1: whole city written (Palm Jumeirah, Burj Al Arab loft, SZR canyon + metro + traffic, Museum of the Future torus with calligraphy canvas, fountain jets, Burj Khalifa Y-plan with 24 spiralling setbacks, Frame, dunes). 46-63 calls, ~185k tris, build 1.65 s, path 4764 m.
-- Round 2: warmer/less mauve palette, lower orange sun, start moved over the Palm so the fronds are seen from above, Burj Al Arab turned side-on with a causeway, dunes and Frame brought closer, museum texture rescaled, matte tower tops, bigger fountain.
-- Still to check: BAA silhouette, palm view at start, colour, portal framing.
+Dubai — round 4 (final)
+- Flight: in over the Palm Jumeirah fronds -> past the Burj Al Arab side-on -> inland down the Sheikh Zayed Road canyon (traffic, metro) past the Museum of the Future -> over the Dubai Fountain -> 1.3 turns of climbing spiral round the Burj Khalifa -> out at ~480 m facing the low sun over the Gulf, Burj Al Arab and Palm below.
+- Round 3/4: stars removed, smaller orange sun, museum ring turned to face the approach, BAA restaurant in white, dune mesh lighter (build 2.3 s -> ~1.8 s), path start pulled in (5028 -> 4874 m).
+- Stats (tools/shot.mjs, --next none): 47-63 calls, 153-160k tris, build 1744-1822 ms, path 4874 m, exit 0. With New York in the portal: up to 164 calls / 512k tris.
+- Still weak: Dubai Frame is built but never framed by the camera; low-rise between coast and SZR is plain boxes; Museum of the Future is seen only obliquely and small; fountain is point sprites; at u~0.75 the Burj is alone against empty sky.

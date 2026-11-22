@@ -47,13 +47,13 @@ export default {
     const r = rng(2010);
     const world = createWorld({
       sky: { top: 0x6a80b6, horizon: 0xffc27c, bottom: 0xc09a70, haze: 0.46 },
-      sun: { dir: [-0.72, 0.13, 0.68], color: 0xffb468, power: 3.7, disc: 0xffc070, size: 0.0009 },
+      sun: { dir: [-0.72, 0.13, 0.68], color: 0xffb468, power: 3.7, disc: 0xa85a20, size: 0.0005 },
       ambient: { sky: 0xc4b6bc, ground: 0xa88458, power: 0.9 },
-      fog: { color: 0xf2c38e, density: 0.00023 }, stars: 120, exposure: 1.05, env: 0.9,
+      fog: { color: 0xf2c38e, density: 0.00023 }, exposure: 1.05, env: 0.9,
     });
     const BK = [650, 100], BAA = [-1080, 1490], PALM = [-1760, 1900], MOF = [-250, 775], FRAME = [1200, -150], RZ = 640, HW = 46, COAST = 1250;   // RZ: Sheikh Zayed Road's centre line, HW: half the canyon's width
     const ring = (deg, rad, y) => [BK[0] + rad * Math.cos(deg * Math.PI / 180), y, BK[1] + rad * Math.sin(deg * Math.PI / 180)];
-    const path = [[-2230, 270, 2100], [-1760, 205, 1900], [-1290, 125, 1650], [-930, 90, 1250], [-720, 62, 900], [-450, 56, RZ + 6], [-100, 60, RZ], [230, 80, 560],
+    const path = [[-2090, 251, 2040], [-1760, 205, 1900], [-1290, 125, 1650], [-930, 90, 1250], [-720, 62, 900], [-450, 56, RZ + 6], [-100, 60, RZ], [230, 80, 560],
       ring(130, 300, 90), ring(70, 250, 150), ring(10, 250, 225), ring(-50, 230, 300), ring(-110, 215, 375), ring(-170, 200, 440), [424, 465, 232], [395, 482, 400]];
     const focus = [[0.09, BAA[0], 150, BAA[1]], [0.24, BAA[0], 170, BAA[1]], [0.33, MOF[0], 70, MOF[1]], [0.42, MOF[0], 75, MOF[1]], [0.5, BK[0], 190, BK[1]], [0.58, BK[0], 260, BK[1]], [0.68, BK[0], 400, BK[1]], [0.8, BK[0], 560, BK[1]]];
     const clear = clearance(path);
@@ -63,7 +63,7 @@ export default {
     const sandTone = 0xe2c69c, sand = mat(sandTone), asphalt = mat(0x4a4744);
     world.add(box(9000, 6, 5750, sand, 0, -4, COAST - 2875, { cast: false }));
     const duneAt = (x, z) => { const k = smooth(-850, -1700, z) + smooth(2400, 3600, Math.abs(x)) * smooth(-600, -1400, z); return k ? Math.min(1, k) * (10 + 95 * Math.pow(Math.abs(Math.sin(x / 260 + 2.2 * fbm(x / 900, z / 900, 3) + z / 700)), 1.6) * (0.5 + fbm(x / 1500 + 5, z / 1500, 2))) : 0; };
-    world.add(terrain({ size: [9000, 3800], center: [0, -2650], seg: 150, height: (x, z) => duneAt(x, z) + 1.5, color: (x, y, z, slope) => (slope > 0.1 ? 0xb9783e : y > 40 ? 0xe2a25c : 0xd89a58) }));
+    world.add(terrain({ size: [9000, 3800], center: [0, -2650], seg: 100, height: (x, z) => duneAt(x, z) + 1.5, color: (x, y, z, slope) => (slope > 0.1 ? 0xb9783e : y > 40 ? 0xe2a25c : 0xd89a58) }));
 
     // ---- the Burj Khalifa: three wings round a core, each stepping back in turn so the setbacks spiral up to the spire
     const silver = facadeMat({ color: 0xc4d0dc, floor: 3.9, bay: 1.7, frame: [0.07, 0.2], glass: 0x6f8aa4, lit: 0.12, litColor: 0xffe6c0, night: 0.9, rough: 0.22, metal: 0.65 });
@@ -100,7 +100,7 @@ export default {
     for (const f of [0, 1, 2]) ba.add(tube(edge(f), f === 2 ? 2.2 : 1.6, white, { seg: 40, radial: 6 }));
     for (let i = 2; i < N; i += 2) { const [a, b, c] = lvl(i), [a1, b1] = lvl(Math.min(N, i + 2)); ba.add(beam(a, c, 1.1, white), beam(b, c, 1.1, white)); if (i % 4 === 2 && i + 2 <= N) ba.add(beam(c, a1, 1.2, white), beam(c, b1, 1.2, white)); }
     ba.add(cyl(0.5, 1.6, 44, white, 0, H - 6, 2, 8), cyl(13, 13, 1.4, white, -6, 208, -22, 24), cyl(11.6, 11.6, 0.2, mat(0x3a7a4a), -6, 209.5, -22, 24), beam([-6, 208, -22], [-22, 190, 0], 1.4, white), beam([-6, 208, -22], [12, 190, 0], 1.4, white));
-    ba.add(box(54, 9, 13, mat(0x2a4a6a, { rough: 0.2, metal: 0.6 }), 0, 196, dAt(196) + 4), cyl(96, 100, 6, mat(0xd8c8a8), 0, -4, 30, 40));
+    ba.add(box(40, 6, 10, white, 0, 198, dAt(198) + 2), cyl(96, 100, 6, mat(0xd8c8a8), 0, -4, 30, 40));
     ba.position.set(BAA[0], 2, BAA[1]); ba.rotation.y = 0.95; world.add(bake(ba), box(14, 3, 190, mat(0xcfc4b0), BAA[0] - 20, 1, (BAA[1] + COAST) / 2 - 30, { ry: 0.08 }));
 
     // ---- the Palm Jumeirah: trunk, sixteen fronds lined with villas, and the crescent breakwater round them
@@ -123,7 +123,7 @@ export default {
 
     // ---- the Museum of the Future: a silver ring of calligraphy standing on a green mound
     const [scriptMap, scriptGlow] = scriptTextures(), skin = mat(0xffffff, { metal: 0.45, rough: 0.35, emissive: 0xffffff, glow: 0.9 }); skin.map = scriptMap; skin.emissiveMap = scriptGlow;
-    world.add(mesh(new THREE.TorusGeometry(31, 14.5, 20, 64).scale(1.32, 1, 1), skin, MOF[0], 71, MOF[1], { ry: 0.3, rz: 0.12 }), dome(1, mat(0x5f9a4a), MOF[0], 2, MOF[1], { scale: [62, 27, 50], ry: 0.5 }));
+    world.add(mesh(new THREE.TorusGeometry(31, 14.5, 20, 64).scale(1.32, 1, 1), skin, MOF[0], 71, MOF[1], { ry: 0.8, rz: 0.12 }), dome(1, mat(0x5f9a4a), MOF[0], 2, MOF[1], { scale: [62, 27, 50], ry: 0.8 }));
 
     // ---- the Dubai Frame: two gold towers and the bridge between them, in its park
     const gold = facadeMat({ color: 0xe0b450, floor: 6, bay: 6, frame: [0.3, 0.3], glass: 0xb88a30, lit: 0, rough: 0.3, metal: 0.8 }), fr = new THREE.Group();

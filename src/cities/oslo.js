@@ -74,8 +74,8 @@ export default {
     });
     // north is -Z; the fjord lies to +Z. The Opera stands at the origin, on the water.
     const CH = [-940, -70], AK = [-480, 70], MU = [240, 10], HK = [-1500, -2500];
-    const path = [[-150, 30, 900], [-150, 22, 500], [-150, 14, 190], [-88, 22, 70], [-66, 35, -30], [-24, 50, -118], [130, 52, -135], [330, 55, -50], [300, 42, 120], [0, 22, 190], [-420, 40, 215], [-790, 48, 120], [-852, 62, -120], [-925, 112, -430]];
-    const focus = [[0.09, 0, 14, 0], [0.2, 0, 16, -10], [0.3, 60, 40, -210], [0.38, 200, 45, -215], [0.46, MU[0], 40, MU[1]], [0.55, 0, 10, 20], [0.63, AK[0], 26, AK[1]], [0.7, AK[0], 28, AK[1]], [0.78, CH[0], 45, CH[1]]];
+    const path = [[-110, 30, 900], [-110, 22, 620], [-150, 14, 390], [-60, 12, 232], [105, 15, 140], [118, 27, 50], [100, 43, -45], [160, 52, -135], [330, 55, -50], [300, 42, 120], [0, 24, 250], [-420, 40, 215], [-790, 48, 120], [-852, 62, -120], [-925, 112, -430]];
+    const focus = [[0.09, 0, 16, 10], [0.27, 0, 18, 0], [0.35, 0, 34, -42], [0.41, 0, 40, -240], [0.47, MU[0], 40, MU[1]], [0.56, 0, 12, 20], [0.61, 0, 14, 10], [0.68, AK[0], 26, AK[1]], [0.75, AK[0], 28, AK[1]], [0.8, CH[0], 45, CH[1]]];
 
     // ---- land and fjord: the flat snowy town, the rock of Akershus, islands, the forested hills behind
     const isles = [[-420, 640, 150, 14], [230, 720, 120, 10], [-800, 900, 180, 16], [650, 1050, 160, 12], [100, 1380, 140, 10], [-1300, 600, 200, 18], [1200, 500, 220, 16]];
@@ -103,13 +103,17 @@ export default {
     aurora.frustumCulled = false; world.add(aurora); world.onUpdate((t) => { auroraMat.uniforms.uT.value = t; });
 
     // ---- the Opera House: white marble sloping out of the fjord, the glowing glass foyer, the fly tower
-    const marble = mat(0xf1f0ec, { rough: 0.55 }), alu = mat(0xd4d8de, { rough: 0.4, metal: 0.4 }), oak = glowMat(0xe2a258, 1.5), dark = mat(0x1a2028, { rough: 0.3, metal: 0.5 });
-    const foyer = facadeMat({ color: 0x8090a0, floor: 15, bay: 3.2, frame: [0.03, 0.02], glass: 0x6a4a2a, lit: 1, litColor: 0xffc880, night: 1.1, rough: 0.2, metal: 0.4 });
-    const op = [mesh(wedge(-104, -44, 64, -1.5, -22, 16.5, -58), marble), mesh(wedge(44, 104, 64, -1.5, -22, 16.5, -58), marble), mesh(wedge(-44, 44, 66, -1.5, 27, 1.6, 26), marble), box(88, 15, 30, foyer, 0, 1.5, 11), box(70, 11, 6, oak, 0, 2, 4), box(90, 1.2, 86, marble, 0, 16.5, -15),
-      box(46, 18, 36, mat(0xe9ecf0, { rough: 0.45, metal: 0.3 }), 0, 17.5, -34), box(47, 0.6, 37, marble, 0, 35.5, -34), box(209, 6, 3, marble, 0, 0, -58), box(30, 4, 14, alu, 60, 16.5, -30), box(2, 15, 30, marble, -44.5, 1.5, 11), box(2, 15, 30, marble, 44.5, 1.5, 11)];
-    for (let i = 0; i < 9; i++) op.push(box(0.5, 15, 0.8, marble, -40 + i * 10, 1.5, 26.2));
+    const marble = mat(0xf6f5f1, { rough: 0.55, emissive: 0xa8b8dc, glow: 0.32 }), alu = mat(0xd4d8de, { rough: 0.4, metal: 0.4 }), oak = glowMat(0xe2a258, 1.5), dark = mat(0x1a2028, { rough: 0.3, metal: 0.5 });
+    const foyer = facadeMat({ color: 0x8090a0, floor: 15, bay: 3.2, frame: [0.03, 0.02], glass: 0x6a4a2a, lit: 1, litColor: 0xffc070, night: 2.4, rough: 0.2, metal: 0.4 });
+    const side = (x0, x1) => { const g = wedge(x0, x1, 64, -1.5, -22, 16.5, -58), p = g.attributes.position; for (let i = 0; i < p.count; i++) if (Math.abs(p.getX(i)) > 100 && p.getZ(i) > 0) p.setX(i, p.getX(i) * 1.22); g.computeVertexNormals(); return mesh(g, marble); };   // outer edges splay toward the water
+    const tower = facadeMat({ color: 0xeef2f8, floor: 4.5, bay: 2.2, frame: [0.06, 0.05], glass: 0x9fb4d0, lit: 0.22, litColor: 0xffd9a0, night: 1.5, rough: 0.35, metal: 0.4 });
+    const op = [side(-104, -44), side(44, 104), mesh(wedge(-44, 44, 66, -1.5, 27, 1.6, 26), marble), box(88, 15, 30, foyer, 0, 1.5, 11), box(70, 11, 6, oak, 0, 2, 4), box(90, 1.2, 86, marble, 0, 16.5, -15),
+      box(46, 27, 36, tower, 0, 17.5, -34), box(47, 0.6, 37, marble, 0, 44.5, -34), box(60, 7, 46, tower, 0, 17.5, -32), box(30, 2.4, 0.4, oak, 0, 30, -15.9), box(209, 6, 3, marble, 0, 0, -58), box(30, 4, 14, alu, 60, 16.5, -30), box(2, 15, 30, marble, -44.5, 1.5, 11), box(2, 15, 30, marble, 44.5, 1.5, 11)];
+    for (let i = 0; i < 17; i++) op.push(box(0.4, 15, 0.8, marble, -40 + i * 5, 1.5, 26.2));
+    op.push(box(92, 1.2, 4, marble, 0, 16.5, 28), box(88, 0.5, 0.9, marble, 0, 9, 26.2));
     const opera = bake(op); opera.forEach((m) => m.scale.setScalar(1.25)); both(...opera);
-    const walkers = []; for (let i = 0; i < 60; i++) { const s = r.chance(0.5) ? -1 : 1, x = s * r.range(48, 100), z = r.range(-50, 55); walkers.push({ x: x * 1.25, y: 1.25 * (z > -22 ? lerp(16.5, -1.5, (z + 22) / 86) : 16.5), z: z * 1.25, sx: 0.5, sy: 1.7, sz: 0.4, color: r.pick([0x2a3040, 0x7a2a2a, 0x2a4a6a, 0x444444]) }); }
+    world.add(box(430, 0.4, 112, mat(0x3c4454), 0, 2.2, -22, { cast: false }));                                             // swept dark paving, so the white roof stands out from the snow
+    const walkers = []; for (let i = 0; i < 170; i++) { const s = r.chance(0.5) ? -1 : 1, x = s * r.range(48, 100), z = r.range(-50, 55); walkers.push({ x: x * 1.25, y: 1.25 * (z > -22 ? lerp(16.5, -1.5, (z + 22) / 86) : 16.5), z: z * 1.25, sx: 0.7, sy: 1.8, sz: 0.6, color: r.pick([0x1a2030, 0x7a2222, 0x1f3a5a, 0x2a2a2a, 0xb8862a]) }); }
     world.add(instances(G(1, 1, 1, 0, 0.5, 0), mat(0xffffff), walkers.filter((w) => w.y > 0.3)));
 
     // ---- Barcode: a row of slim towers, no two alike, across the tracks behind the Opera
