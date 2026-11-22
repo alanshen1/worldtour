@@ -1,5 +1,5 @@
 # istanbul.js handoff
-Round 3 — considered done. Flight: in from the Marmara towards the sunset skyline -> between the Blue Mosque and Hagia Sophia -> round Hagia Sophia and over Topkapi and its walls -> across the Golden Horn (Galata Bridge) -> round the Galata Tower -> out over the Bosphorus among ferries and gulls with the Bosphorus Bridge to the north -> portal over the water by the Maiden's Tower, facing the old city and the sun.
-Stats: calls 54-113, tris ~627k (terrain 139k + ~13k houses with near-path shadows), build ~1600 ms, path 3908 m, duration 48, exit 0. Portal checked with --next new-york.
-Weak: houses are large stylised blocks; Blue Mosque is seen from ~110 m but never circled; last 200 m bend ~12 deg; Maiden's Tower only appears in the final seconds; Hagia Sophia's buttress blocks still carry window patterns.
-Next (if time): plain stone material for buttresses, a closer Blue Mosque pass, wakes behind ferries.
+Round 5 — done. Changes since round 3: Hagia Sophia and the Blue Mosque enlarged 1.45x (grow() over the shared dome/minaret/block lists); path now runs between them at dome-top height then arcs round Hagia Sophia's west and north; focus holds the Blue Mosque to u 0.255 (seen against the sun, six minarets), an "ahead" key at 0.285 stops the camera pitching down between the two, Hagia Sophia from 0.325 to 0.43; all focus keys end at 0.75. Suleymaniye raised (hill 62 m, scale 2.5) and seven more skyline mosques added; houses smaller.
+Stats: calls 55-113, tris ~655k, build ~1600-1800 ms, path 4041 m, duration 48, exit 0. Portal frames (0.93, 0.985 with --next new-york) viewed: Maiden's Tower sits right of the ring, old-city domes behind, sun above.
+Weak: u ~0.85 (open Bosphorus, Asian shore) is quiet; ferries can pass under the portal; houses are stylised blocks; Suleymaniye is mostly outside the frame at the start.
+Next (if time): something on the Asian shore for u 0.8-0.9, wakes behind ferries.
