@@ -14,7 +14,7 @@ export const CITIES = [
   { id: 'melbourne', zh: '墨尔本', en: 'Melbourne', where: '澳大利亚', line: '亚拉河畔的电车之城' },
   { id: 'auckland', zh: '奥克兰', en: 'Auckland', where: '新西兰', line: '天空塔与千帆之城' },
   { id: 'oslo', zh: '奥斯陆', en: 'Oslo', where: '挪威', line: '峡湾边的冬夜' },
-  { id: 'spain', zh: '巴塞罗那', en: 'Barcelona', where: '西班牙', line: '高迪的午后' },
+  { id: 'barcelona', zh: '巴塞罗那', en: 'Barcelona', where: '西班牙', line: '高迪的午后' },
   { id: 'washington', zh: '华盛顿', en: 'Washington, D.C.', where: '美国', line: '樱花季的国家广场' },
   { id: 'shanghai', zh: '上海', en: 'Shanghai', where: '中国', line: '外滩对岸的陆家嘴' },
   { id: 'fukuoka', zh: '福冈', en: 'Fukuoka', where: '日本', line: '博多湾的黄昏与屋台' },

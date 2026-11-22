@@ -1,0 +1,2 @@
+Round 2 (rio.js): first build ran (30-53 calls, ~400k tris, build 1.7 s). Fixed sea floor at y=0 (z-fighting everywhere), Sugarloaf made taller/slimmer, statue bigger (x1.8), path retimed so the statue arc is at u 0.68-0.76 (focus fades after 0.74), Maracana moved to (-1600,-1500), portal now at (-1000,270,-1000).
+Weak/next: check statue arc frames, Corcovado rock face, Copacabana promenade pattern visible?, favela, end vista.

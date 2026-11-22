@@ -34,9 +34,9 @@ export default {
       fog: { color: 0x2a2248, density: 0.00033 }, stars: 700, exposure: 1.4, env: 0.6,
     });
     const path = [[600, 34, -1400], [600, 30, -1050], [600, 28, -640], [480, 14, -250], [150, 14, 60], [-180, 45, 260], [-200, 110, 420], [0, 150, 520], [230, 190, 560],
-      [480, 235, 650], [520, 275, 800], [420, 300, 960], [250, 360, 1250], [100, 430, 1480], [-120, 470, 1560], [-300, 465, 1420], [-340, 452, 1230], [-340, 440, 1040]];
-    const IFC = [-350, 520], BOC = [380, 720], ICC = [-900, -820], PEAK = [-120, 1650], KX = 600, HW = 22;   // KX: the neon street's centre line, HW: half its width
-    const focus = [[0.29, BOC[0], 190, BOC[1]], [0.38, IFC[0], 200, IFC[1]], [0.47, IFC[0], 250, IFC[1]], [0.56, BOC[0], 220, BOC[1]], [0.68, BOC[0], 270, BOC[1]], [0.74, PEAK[0], 430, PEAK[1]], [0.79, PEAK[0], 440, PEAK[1]]];
+      [480, 235, 650], [520, 275, 800], [420, 300, 960], [180, 350, 1160], [-150, 400, 1320], [-430, 440, 1400], [-640, 455, 1310], [-700, 450, 1120], [-700, 440, 930]];
+    const IFC = [-350, 520], BOC = [380, 720], ICC = [-900, -820], PEAK = [-470, 1570], KX = 600, HW = 22;   // KX: the neon street's centre line, HW: half its width
+    const focus = [[0.29, BOC[0], 190, BOC[1]], [0.38, IFC[0], 200, IFC[1]], [0.47, IFC[0], 250, IFC[1]], [0.56, BOC[0], 220, BOC[1]], [0.68, BOC[0], 270, BOC[1]], [0.74, PEAK[0], 400, PEAK[1]], [0.8, PEAK[0], 410, PEAK[1]]];
     const clear = clearance(path);
 
     // ---- the harbour, the flat reclaimed shores, and the hills: Victoria Peak behind the island city, Lion Rock far behind Kowloon
@@ -44,12 +44,13 @@ export default {
     const tarmac = mat(0x2b2e3c, { rough: 0.8 });
     world.add(bake(box(9000, 4, 4100, tarmac, 0, -2, 2500), box(9000, 4, 4000, tarmac, 0, -2, -2500), box(520, 4, 260, tarmac, -900, -2, -420), box(300, 4, 70, tarmac, 1000, -2, 425), box(260, 4, 50, tarmac, -150, -2, 430)));
     const hillAt = (x, z) => {
+      if (z > -2700 && z < 840) return 0;
       const peak = 445 * smooth(840, 1640, z) * (0.74 + 0.5 * fbm(x / 600 + 3, z / 600, 3)) * (0.5 + 0.5 * smooth(3200, 1300, Math.abs(x + 100))) * (1 - 0.35 * smooth(1900, 3200, z));
       return Math.max(Math.min(peak, clear(x, z, 130) - 55), 420 * smooth(-2700, -3600, z) * (0.45 + 0.9 * fbm(x / 700, z / 700, 3)));
     };
-    world.add(terrain({ size: 9000, seg: 150, height: (x, z) => hillAt(x, z) - 4, color: (x, y, z, slope) => (slope > 0.2 ? 0x25382e : 0x1f3a2a) }));
-    const tufts = [], dark = [0x1c3a28, 0x234430, 0x183222, 0x2a4a30];
-    while (tufts.length < 2600) { const x = r.range(-2600, 2600), z = r.range(880, 2500), y = hillAt(x, z), s = r.range(9, 16); if (y > 12) tufts.push({ x, y: y - 3 + s * 0.3, z, sx: s, sy: s * 0.7, sz: s, ry: r() * 6, color: r.pick(dark) }); }
+    world.add(terrain({ size: 9000, seg: 150, height: (x, z) => hillAt(x, z) - 4, color: (x, y, z, slope) => (slope > 0.2 ? 0x6a8a6c : 0x5c8c62) }));
+    const tufts = [], dark = [0x4a8456, 0x569060, 0x40784c, 0x5e9662];
+    while (tufts.length < 4200) { const x = r.range(-2200, 2000), z = r.range(880, 2100), y = hillAt(x, z), s = r.range(6, 11); if (y > 12) tufts.push({ x, y: y - 3 + s * 0.3, z, sx: s, sy: s * 0.7, sz: s, ry: r() * 6, color: r.pick(dark) }); }
     world.add(instances(new THREE.IcosahedronGeometry(1, 0), mat(0xffffff, { rough: 0.9, flat: true }), tufts, { cast: false }));
 
     // ---- the Bank of China Tower: four triangular shafts that stop at different heights under slanted glass, tied with white cross-bracing
@@ -97,8 +98,10 @@ export default {
     const glassTones = [0x56627c, 0x4a5670, 0x626e88, 0x545a72, 0x6a6474, 0x4a6274], oldTones = [0x7c7a80, 0x8c8480, 0x6c7080, 0x8a8a8c, 0x787c88];
     const A = [], B = [], crowns = [], strips = [], roofTop = [], neon = [0xff3b6b, 0x39e6ff, 0xffe14a, 0xff7a1a, 0x7dff6a, 0xffffff, 0xff5ad1, 0x6aa8ff, 0xffffff];
     const dress = (b) => {
-      if (b.h > 120) { const c = r.pick(neon); crowns.push({ x: b.x, y: b.y + b.h, z: b.z, sx: b.w + 0.6, sy: r.range(2, 5), sz: b.d + 0.6, color: c }); roofTop.push([b.x, b.y + b.h + 8, b.z]);
-        if (r.chance(0.45)) for (const s of [-1, 1]) strips.push({ x: b.x + s * b.w / 2, y: b.y, z: b.z - Math.sign(b.z) * b.d / 2, sx: 0.9, sy: b.h, sz: 0.9, color: c }); }
+      if (b.h <= 120) return;
+      const c = r.pick(neon), y = b.y ?? 0, front = b.z - Math.sign(b.z) * b.d / 2; roofTop.push([b.x, y + b.h + 8, b.z]);
+      if (r.chance(0.5)) crowns.push({ x: b.x, y: y + b.h - 3, z: front, sx: b.w + 0.5, sy: 3, sz: 0.8, color: c });
+      if (r.chance(0.35)) for (const s of [-1, 1]) strips.push({ x: b.x + s * b.w / 2, y, z: front, sx: 0.9, sy: b.h, sz: 0.9, color: c });
     };
     for (const b of isle) { if (!(b.h > 12)) continue; b.y = hillAt(b.x, b.z) - 3; b.h += 3; if (b.h > 105) { b.color = r.pick(glassTones); B.push(b); } else { b.color = r.pick(oldTones); A.push(b); } dress(b); }
 
@@ -131,12 +134,17 @@ export default {
     // a few big names along the island's rooftops, facing the harbour
     [['香港', -900, 560], ['維多利亞港', 760, 540], ['東方之珠', 1700, 560], ['中環', 130, 560]].forEach(([txt, x, z], i) => { const b = sign(txt, 15, { color: css[i], glow: 2 }); b.position.set(x, 150 + i * 14, z - 60); b.rotation.y = Math.PI; world.add(b, box(b.geometry.parameters.width + 6, 142 + i * 14, 30, icy, x, 0, z - 44, { cast: false })); });
     world.add(buildings(A, facadeMat({ floor: 3.3, bay: 2.9, frame: [0.22, 0.28], glass: 0x0f1218, lit: 0.44, litColor: 0xffd9a0, night: 1.45, rough: 0.9 }), { cast: false }));
-    world.add(buildings(B, facadeMat({ floor: 4, bay: 2.8, frame: [0.11, 0.18], glass: 0x0e1420, lit: 0.42, litColor: 0xe2ecff, night: 1.3, rough: 0.35, metal: 0.3 }), { cast: false }), boards);
+    [[0xe2ecff, 0.42], [0xffd890, 0.5], [0x9fe8e0, 0.34]].forEach(([litColor, share], k) => world.add(buildings(B.filter((b, i) => i % 3 === k), facadeMat({ floor: 4, bay: 2.8, frame: [0.11, 0.18], glass: 0x0e1420, lit: share, litColor, night: 1.3, rough: 0.35, metal: 0.3 }), { cast: false })));
+    world.add(boards);
+    for (const a of [-1, 1]) for (const b of [-1, 1]) strips.push({ x: ICC[0] + a * 34, y: 0, z: ICC[1] + b * 34, sx: 1.2, sy: 440, sz: 1.2, color: 0xdfeaff }, { x: IFC[0] + a * 27, y: 70, z: IFC[1] + b * 27, sx: 1, sy: 300, sz: 1, color: 0xdfeaff });
+    const lamps = [];
+    for (const b of [...A, ...B]) { if (r.chance(0.6)) lamps.push([b.x + 26, (b.y ?? 0) + 8, b.z + r.range(-18, 18)]); if (b.h < 105 && r.chance(0.22)) panels.push({ x: b.x, y: (b.y ?? 0) + b.h, z: b.z, sx: r.range(4, 12), sy: r.range(2, 5), sz: 1, color: r.pick(neon) }); }
+    lights(world, lamps, { color: [0xffc070, 0xffe0b0, 0xfff0e0], size: 6, power: 0.85 });
     const unit = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
     world.add(instances(unit, glowMat(0xffffff, 1.5, { toneMapped: false }), [...panels, ...crowns, ...strips], { cast: false, receive: false }));
     world.add(box(HW * 2, 0.1, 800, glowMat(0x2c2244), KX, 2.02, -960, { cast: false, receive: false }));
     world.onUpdate((t, dt, cam) => { boards.visible = Math.hypot(cam.position.x - KX, cam.position.z + 960) < 1100; });
-    lights(world, pools, { color: neon, size: 50, power: 0.24, rand: rng(6) });
+    lights(world, pools, { color: neon, size: 44, power: 0.15, rand: rng(6) });
     const red = lights(world, roofTop, { color: 0xff2a1a, size: 6, power: 1.5 }); world.onUpdate((t) => { red.material.opacity = 0.55 + 0.45 * Math.sin(t * 2.4); });
 
     // ---- the Peak Tram: a lit track straight up the hill, a red car climbing it, and the Peak Tower at the top
@@ -145,30 +153,33 @@ export default {
     lights(world, rail.getSpacedPoints(60).map((p) => [p.x, p.y + 3, p.z]), { color: 0xffc878, size: 5, power: 1 });
     fleet(world, new THREE.BoxGeometry(3.2, 3.6, 12).translate(0, 3.4, 0), mat(0xb8201c, { emissive: 0xff5030, glow: 0.8 }), 2, (i, t) => { const u = 0.5 - 0.5 * Math.cos(t * 0.09 + i * Math.PI), p = rail.getPointAt(u); return [p.x, p.y, p.z, -0.5]; });
     const py = hillAt(...PEAK) - 4, pt = new THREE.Group(), shell = mat(0xd8dce4, { emissive: 0xffe2b0, glow: 0.7 });
-    pt.add(box(30, 30, 22, facadeMat({ color: 0x8a8e9a, floor: 5, bay: 3, frame: [0.1, 0.2], glass: 0x141824, lit: 0.9, litColor: 0xffe2b0, night: 1.8 }), 0, 0, 0), mesh(new THREE.SphereGeometry(1, 24, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(38, 12, 17), shell, 0, 42, 0), box(76, 1.2, 34, shell, 0, 42, 0));
-    pt.position.set(PEAK[0], py, PEAK[1]); world.add(bake(pt));
-    const homes = []; while (homes.length < 420) { const x = r.range(-2400, 2400), z = r.range(950, 2300), y = hillAt(x, z); if (y > 30) homes.push([x, y + 2, z]); }
+    pt.scale.setScalar(1.5); pt.add(box(30, 30, 22, facadeMat({ color: 0x8a8e9a, floor: 5, bay: 3, frame: [0.1, 0.2], glass: 0x141824, lit: 0.9, litColor: 0xffe2b0, night: 1.8 }), 0, 0, 0), mesh(new THREE.SphereGeometry(1, 24, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(38, 12, 17), shell, 0, 42, 0), box(76, 1.2, 34, shell, 0, 42, 0));
+    pt.add(box(40, 40, 30, mat(0x6a6e78), 0, -40, 0)); pt.position.set(PEAK[0], py - 10, PEAK[1]); world.add(bake(pt));
+    const homes = []; while (homes.length < 900) { const x = r.range(-2400, 2400), z = r.range(950, 2100), y = hillAt(x, z); if (y > 30) homes.push([x, y + 2, z]); }
     lights(world, homes, { color: [0xffc070, 0xffe0b0, 0xfff0e0], size: 6, power: 0.8 });
 
     // ---- A Symphony of Lights: beams sweeping from the rooftops
     const beams = [[IFC[0], 412, IFC[1], 0x7dff9a], [BOC[0], 330, BOC[1], 0xffffff], [1150, 380, 640, 0xffe14a], [-640, 300, 700, 0x6aa8ff], [ICC[0], 470, ICC[1], 0xffffff], [-1300, 190, 600, 0x39e6ff], [1800, 190, 600, 0xff5ad1], [700, 200, 590, 0x7dff9a]].map(([x, y, z, c], i) => {
-      const m = mesh(new THREE.CylinderGeometry(16, 1.2, 900, 8, 1, true).translate(0, 450, 0), glowMat(c, 1, { additive: true, opacity: 0.13, side: THREE.DoubleSide }), x, y, z, { cast: false, receive: false });
+      const m = mesh(new THREE.CylinderGeometry(16, 1.2, 900, 8, 1, true).translate(0, 450, 0), glowMat(c, 1, { additive: true, opacity: 0.09, side: THREE.DoubleSide }), x, y, z, { cast: false, receive: false });
       world.add(m); return [m, i];
     });
     world.onUpdate((t) => { for (const [m, i] of beams) { m.rotation.z = 0.7 * Math.sin(t * 0.35 + i * 1.7); m.rotation.x = -0.35 + 0.3 * Math.sin(t * 0.23 + i); } });
 
     // ---- on the water: Star Ferries plying across, junks under red sails, the city's lights scattered over the swell
-    const routes = [[[860, -470], [800, 440]], [[-300, -455], [-480, 440]], [[1500, -470], [1700, 440]]];
+    const routes = [[[860, -470], [800, 440]], [[250, -480], [-330, 432]], [[1500, -470], [1700, 440]]];
     const ply = (i, t) => { const [a, b] = routes[i % 3], ph = t * 0.012 + i * 0.37, u = 0.5 - 0.5 * Math.cos(ph * Math.PI * 2), back = Math.sin(ph * Math.PI * 2) < 0; return [lerp(a[0], b[0], u), 0, lerp(a[1], b[1], u), Math.atan2(b[0] - a[0], b[1] - a[1]) + (back ? Math.PI : 0)]; };
     fleet(world, mergeGeometries([new THREE.BoxGeometry(9, 3.6, 30).translate(0, 1, 0), new THREE.CylinderGeometry(4.5, 4.5, 3.6, 3).scale(1, 1, 1.5).translate(0, 1, 18.4), new THREE.CylinderGeometry(4.5, 4.5, 3.6, 3).scale(1, 1, 1.5).rotateY(Math.PI).translate(0, 1, -18.4)]), mat(0x1f7a4a, { emissive: 0x1a6a3a, glow: 0.45 }), 6, ply);
     fleet(world, mergeGeometries([new THREE.BoxGeometry(8.4, 2.6, 32).translate(0, 4.1, 0), new THREE.BoxGeometry(7.6, 2.4, 26).translate(0, 6.6, 0), new THREE.BoxGeometry(8.8, 0.4, 33).translate(0, 8, 0), new THREE.CylinderGeometry(1, 1.2, 4, 8).translate(0, 10, 0)]), mat(0xf4f0e0, { emissive: 0xffe8c0, glow: 0.85 }), 6, ply);
-    const moored = [[420, -110, 22], [-760, -120, 50], [1250, 90, 60]], drift = (i, t) => { const [x, z, rad] = moored[i], a = t * 0.05 + i * 2; return [x + Math.cos(a) * rad, 0, z + Math.sin(a) * rad, -a]; };
-    fleet(world, mergeGeometries([new THREE.BoxGeometry(7, 3.4, 24).translate(0, 1.2, 0), new THREE.BoxGeometry(7.4, 3.4, 7).translate(0, 4, -9.5), new THREE.BoxGeometry(5, 2, 5).translate(0, 3.4, 11), ...[-7, 1, 9].map((z, k) => new THREE.CylinderGeometry(0.25, 0.3, [15, 22, 13][k], 5).translate(0, [15, 22, 13][k] / 2 + 2, z))]), mat(0x4a3024, { emissive: 0x6a3a1a, glow: 0.4 }), 3, drift);
+    const moored = [[330, 30, 25], [-760, -120, 50], [1250, 90, 60]], drift = (i, t) => { const [x, z, rad] = moored[i], a = t * 0.05 + i * 2; return [x + Math.cos(a) * rad, 0, z + Math.sin(a) * rad, -a]; }, big = (g) => g.scale(1.5, 1.5, 1.5);
+    fleet(world, big(mergeGeometries([new THREE.BoxGeometry(7, 3.4, 24).translate(0, 1.2, 0), new THREE.BoxGeometry(7.4, 3.4, 7).translate(0, 4, -9.5), new THREE.BoxGeometry(5, 2, 5).translate(0, 3.4, 11), ...[-7, 1, 9].map((z, k) => new THREE.CylinderGeometry(0.25, 0.3, [15, 22, 13][k], 5).translate(0, [15, 22, 13][k] / 2 + 2, z))])), mat(0x4a3024, { emissive: 0x6a3a1a, glow: 0.4 }), 3, drift);
     const sails = []; [[-7, 14, 9], [1, 21, 12], [9, 12, 7]].forEach(([z, top, w]) => { const a = [0.4, 5, z + 1], b = [0.4, 5.5, z - w], c = [0.4, top, z - w * 0.72], d = [0.4, top + 2.5, z + 1.6]; sails.push(a, b, c, a, c, d); });
-    fleet(world, facets(sails), mat(0xd42a18, { emissive: 0xff2a0c, glow: 0.95, side: THREE.DoubleSide }), 3, drift);
-    const glint = []; for (let i = 0; i < 1500; i++) { const d = r() * r(), s = i % 2 ? 1 : -1; glint.push([r.range(-2600, 2600), 0.4, s > 0 ? 448 - d * 430 : -498 + d * 380]); }
+    fleet(world, big(facets(sails)), mat(0xd42a18, { emissive: 0xff2a0c, glow: 0.95, side: THREE.DoubleSide }), 3, drift);
+    const streaks = []; for (let i = 0; i < 260; i++) { const s = i % 3 ? 1 : -1, l = r.range(60, 230); streaks.push({ x: r.range(-2400, 2400), y: 0.25, z: s > 0 ? 448 - l / 2 : -498 + l / 2, sx: r.range(5, 16), sy: 0.1, sz: l, color: r.pick(neon) }); }
+    world.add(instances(new THREE.BoxGeometry(1, 1, 1), glowMat(0xffffff, 1, { additive: true, opacity: 0.16 }), streaks, { cast: false, receive: false }));
+    const glint = []; for (let i = 0; i < 1500; i++) { const d = r() * r(), s = i % 2 ? 1 : -1; glint.push([r.range(-2600, 2600), 0.4, i % 3 === 0 ? r.range(-490, 440) : s > 0 ? 448 - d * 430 : -498 + d * 380]); }
     lights(world, glint, { color: [0xffd9a0, 0xfff0d8, 0xff9a60, 0x9ad0ff, 0xff6a8a, 0x7dff9a], size: 4.5, power: 0.6, rand: rng(9) });
 
+    for (const [z, c, n] of [[-300, 0xffe0a0, 9], [-80, 0xfff6e0, 7], [180, 0xffb060, 9], [330, 0x9ad0ff, 6]]) traffic(world, [[-2400, 2.5, z], [-800, 2.5, z + 60], [800, 2.5, z - 50], [2400, 2.5, z]], { count: n, color: c, size: 9, speed: 6 });
     // ---- traffic: the neon street, the waterfront roads on both shores
     const road = (a, b, n, o = {}) => { traffic(world, [a, b], { count: n, color: 0xfff2d8, size: 3.6, speed: 14, spread: 2.5, ...o }); };
     road([KX - 7, 3.2, -1800], [KX - 7, 3.2, -580], 70); road([KX + 7, 3.2, -580], [KX + 7, 3.2, -1800], 70, { color: 0xff2a1a });
