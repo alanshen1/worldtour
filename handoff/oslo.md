@@ -1,5 +1,8 @@
-Round 3 (oslo.js): Opera reworked so it reads. New approach: straight in over the water at 12-30 m facing the Opera front for the first ~27% of the flight, then up the east roof ramp (>= 65 m from the fly tower), Barcode, Munch, and a second frontal pass at u~0.58.
-Opera changes: floodlit marble, splayed outer ramp edges, brighter glowing foyer with fine mullions, taller two-stage glazed fly tower (top ~56 m), 170 walkers, dark swept paving round it for contrast.
-Stats (--next none): ~90 calls / 219k tris / build ~1930 ms, path 3293 m, duration 46.
-Verified t=0.15/0.22/0.28/0.33/0.58: Opera central and recognisable with reflection; portal framing unchanged (over town toward Holmenkollen).
-Still weak: walkers are blocky up close; Akershus rock coarse; Holmenkollen small/far; town plain.
+# oslo.js handoff (real 3D tiles)
+Rewritten as kind: 'tiles' (the kit version is in the repo history). Origin on the water of Bjørvika (59.9050, 10.7495; measured ground 39 m = ellipsoid height of the fjord), so alt ~ metres above the fjord.
+Round 1 (run 1): 4.2 km. City Hall (0.35) and Akershus (0.45) good; Opera seen from across the water (0.55) and from on its roof (0.62, lift 14: the roof reaches further west than 10.7515); end wandered onto land at the foot of Ekeberg.
+Round 2 (run 2): shorter fjord start, low pass across Bjørvika rising earlier, Barcode, loop back past Munch, portal over the harbour facing the fjord islands. 4.08 km, 56 s, max lift 4 m. Good: City Hall ahead (0.20), Akershus + cruise ship (0.32), the Opera's roof sloping into the water from a low pass (0.50, best frame), Munch + Sørenga (0.78), open fjord islands at the portal (0.88, 0.96). Weak: 0.54 is ~30 m over the stage tower; 0.58/0.64 look down (focus pitched low) onto the Opera's back and the rail tracks.
+Round 3 (editing): roof climb point raised to 70 m; Opera focus ends at 0.54; Barcode focus keys at 0.60/0.69 raised to 85 m so the camera looks across rather than down.
+Round 3 (run 3, t 0.50-0.74 only): max lift 4 m (0.50, the low pass just before the roof). Barcode now reads as the striped row along the street (0.58) and from the side over the tracks (0.66, 0.70); Munch + Sørenga at 0.74. 0.54 is still ~30 m over the stage tower but in open air.
+Round 4 (run 4, --next new-york t 0.90, 0.985): portal over the harbour, ring in open air with the fjord islands around it and New York inside. DONE. Final: 4076 m, 56 s, lifts 0 except 4 m at 0.50. Runs used: 4.
+Still weak: the start (0.03) is open fjord with the city far off; 0.58-0.64 framing of the Barcode is from above rather than eye level.
