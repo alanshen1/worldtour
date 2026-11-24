@@ -11,14 +11,20 @@
 //     look: { sky, sun, fog, exposure, tint } sky, sun and fog as for kit createWorld(); tint multiplies the photo colours }
 import * as THREE from 'three';
 import { TilesRenderer, WGS84_ELLIPSOID } from '3d-tiles-renderer';
-import { GoogleCloudAuthPlugin, ReorientationPlugin, TileCompressionPlugin, GLTFExtensionsPlugin } from '3d-tiles-renderer/plugins';
+import { GoogleCloudAuthPlugin, CesiumIonAuthPlugin, ReorientationPlugin, TileCompressionPlugin, GLTFExtensionsPlugin } from '3d-tiles-renderer/plugins';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createWorld } from './kit.js';
 
 const ROOT_URL = 'https://tile.googleapis.com/v1/3dtiles/root.json', KEY_STORE = 'worldtour.googleKey', D2R = Math.PI / 180;
+// The same Google tiles can come two ways: straight from Google with a Map Tiles API key (they start "AIza"), or through
+// Cesium ion with an ion access token (a free account, no Google Cloud billing). ION_ASSET is Google's tileset in ion.
+const ION_ASSET = 2275207, ION_ENDPOINT = `https://api.cesium.com/v1/assets/${ION_ASSET}/endpoint`;
+const isGoogleKey = (k) => /^AIza/.test(k);
+/** Which service to ask: 'google' or 'ion'. With no key at all, ?provider= picks (default ion). */
+const provider = (key) => key ? (isGoogleKey(key) ? 'google' : 'ion') : (new URLSearchParams(location.search).get('provider') === 'google' ? 'google' : 'ion');
 
 // ---------------------------------------------------------------- the API key
-// The key is never part of the site: it comes from ?key= or from this browser's storage. With no key at all the
+// The key (or ion token) is never part of the site: it comes from ?key= or from this browser's storage. With no key at all the
 // requests go out bare, which works where a proxy adds the key on the way (the cloud sessions this was built in).
 export function apiKey() {
   const fromUrl = new URLSearchParams(location.search).get('key');
@@ -26,9 +32,10 @@ export function apiKey() {
   try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }
 }
 export function setApiKey(k) { try { k ? localStorage.setItem(KEY_STORE, k) : localStorage.removeItem(KEY_STORE); } catch (e) { /* private window: key lasts this visit only */ } }
-/** True when the 3D tiles answer with the key we have (or with none, behind a proxy that adds it). */
+/** True when the 3D tiles answer with the key or token we have (or with none, behind a proxy that adds it). */
 export async function keyWorks(key = apiKey()) {
-  try { const r = await fetch(ROOT_URL + (key ? '?key=' + encodeURIComponent(key) : '')); return r.ok; } catch (e) { return false; }
+  const url = provider(key) === 'google' ? ROOT_URL + (key ? '?key=' + encodeURIComponent(key) : '') : ION_ENDPOINT + (key ? '?access_token=' + encodeURIComponent(key) : '');
+  try { const r = await fetch(url); return r.ok; } catch (e) { return false; }
 }
 
 // ---------------------------------------------------------------- one tileset
@@ -41,21 +48,21 @@ function sessionFrom(node) {
   for (const c of node.children ?? []) { const s = sessionFrom(c); if (s) return s; }
   return null;
 }
+function ionPlugin(key) {
+  const ion = new CesiumIonAuthPlugin({ apiToken: key, assetId: String(ION_ASSET), autoRefreshToken: true });
+  if (!key) {
+    // as for Google below: no token means a proxy adds it, so ask for the endpoint without an empty access_token
+    const auth = ion.auth;
+    auth.refreshToken = (options) => (auth._tokenRefreshPromise ??= fetch(auth.authURL, options)
+      .then((res) => { if (!res.ok) throw new Error(`Cesium ion answered ${res.status}`); return res.json(); })
+      .then((json) => { if (json.accessToken && json.url) { auth._bearerToken = `Bearer ${json.accessToken}`; auth._bearerHostname = new URL(json.url).host; } auth._tokenRefreshPromise = null; return json; }));
+  }
+  return ion;
+}
 function makeTiles(look) {
   const key = apiKey(), tiles = new TilesRenderer(ROOT_URL);
-  const google = new GoogleCloudAuthPlugin({ apiToken: key, autoRefreshToken: true });
-  if (!key) {
-    // the library always appends key=; with no key that empty value would be rejected, so send the requests bare
-    const auth = google.auth;
-    auth.fetch = async (url, options) => {
-      const u = new URL(url);
-      if (u.host === 'tile.googleapis.com' && auth.sessionToken) u.searchParams.set('session', auth.sessionToken);
-      const res = await fetch(u, options);
-      if (auth.sessionToken === null && res.ok) { const json = await res.json(); auth.sessionToken = sessionFrom(json.root); return json; }
-      return res;
-    };
-  }
-  tiles.registerPlugin(google);
+  if (provider(key) === 'ion') tiles.registerPlugin(ionPlugin(key));
+  else tiles.registerPlugin(googlePlugin(key));
   tiles.registerPlugin(new TileCompressionPlugin());
   tiles.registerPlugin(new GLTFExtensionsPlugin({ dracoLoader: dracoLoader() }));
   // photographs carry their own light: draw them unlit and untoned, tinted for the hour, and let the fog take the distance
@@ -68,6 +75,21 @@ function makeTiles(look) {
     });
   });
   return tiles;
+}
+function googlePlugin(key) {
+  const google = new GoogleCloudAuthPlugin({ apiToken: key, autoRefreshToken: true });
+  if (!key) {
+    // the library always appends key=; with no key that empty value would be rejected, so send the requests bare
+    const auth = google.auth;
+    auth.fetch = async (url, options) => {
+      const u = new URL(url);
+      if (u.host === 'tile.googleapis.com' && auth.sessionToken) u.searchParams.set('session', auth.sessionToken);
+      const res = await fetch(u, options);
+      if (auth.sessionToken === null && res.ok) { const json = await res.json(); auth.sessionToken = sessionFrom(json.root); return json; }
+      return res;
+    };
+  }
+  return google;
 }
 
 // ---------------------------------------------------------------- building a real city
@@ -105,7 +127,7 @@ export async function buildTilesCity(city, renderer, o = {}) {
   probe.position.set(0, 2500, 1); probe.lookAt(0, 0, 0);
   const t0 = performance.now();
   while (!tiles.root && performance.now() - t0 < (o.timeout ?? 30000)) { track(probe); await sleep(80); }
-  if (!tiles.root) throw new Error('Google 3D tiles did not answer (check the API key)');
+  if (!tiles.root) throw new Error('the 3D tiles did not answer (check the Google key or Cesium ion token)');
   probe.position.set(0, 900, 1); probe.lookAt(0, 0, 0); await settle(probe);
   tiles.group.updateMatrixWorld(true);
   const ray = new THREE.Raycaster(); ray.firstHitOnly = true;

@@ -223,11 +223,11 @@ function showCredits() {
 /** Shows the key box until a key that works is entered. The key stays in this browser only. */
 function askKey() {
   return new Promise((done) => {
-    const box = $('keybox'), input = $('key-input'), msg = $('key-msg'); box.hidden = false; $('veil-sub').textContent = '需要一个 Google API key';
+    const box = $('keybox'), input = $('key-input'), msg = $('key-msg'); box.hidden = false; $('veil-sub').textContent = '需要一个访问 token';
     $('key-form').onsubmit = async (e) => {
       e.preventDefault(); const k = input.value.trim(); if (!k) return;
       msg.textContent = '正在检查…';
-      if (await keyWorks(k)) { setApiKey(k); box.hidden = true; done(); } else msg.textContent = '这个 key 不能用：请确认它已开通 Map Tiles API，并允许当前网址使用。';
+      if (await keyWorks(k)) { setApiKey(k); box.hidden = true; done(); } else msg.textContent = '这个 token 不能用：Cesium ion 的请确认复制完整；Google key 请确认已开通 Map Tiles API，并允许当前网址使用。';
     };
     input.focus();
   });

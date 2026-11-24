@@ -22,13 +22,13 @@ npm start
 
 在地址后加 `#tokyo` 之类可以直接从某座城市出发。
 
-## Google API key
+## 访问 token
 
-实景城市需要一个 Google Cloud API key：
+实景城市需要下面两种 token 之一，打开网站时会弹出输入框让你填。它只保存在这台设备的浏览器里，不会进入代码仓库；也可以在网址后加 `?key=...`。
 
-1. 在 Google Cloud Console 新建或选一个项目，开通 **Map Tiles API**，并为项目开通结算（Google 按请求量计费，有每月免费额度，以 Google 当前公布的价格为准；每进入一座城市大约算一次会话）。
-2. 新建一个 API key，在“应用限制”里选“网站”，只允许你自己的网址（比如 `http://localhost:8000/*` 和你的 GitHub Pages 地址）使用它。
-3. 打开网站时会弹出输入框，填进去即可。key 只保存在这台设备的浏览器里，不会进入代码仓库。也可以在网址后加 `?key=你的key`。
+**Cesium ion（推荐，免费）**：在 [ion.cesium.com](https://ion.cesium.com) 用邮箱注册免费账号，不用信用卡。打开 Access Tokens 页面，复制默认 token（以 `eyJ` 开头）。Google 的写实 3D 瓦片已包含在 ion 账号里，免费账号每月有 1000 次根瓦片额度，限个人非商业用途；每进入一座城市大约用掉一次。
+
+**Google Map Tiles API key**：在 Google Cloud Console 开通 Map Tiles API 和结算，新建 key（以 `AIza` 开头），并在“应用限制”里只允许你自己的网址使用。Google 按请求量计费，有每月免费额度，以 Google 当前公布的价格为准。
 
 画面里会显示 Google 和数据提供方的署名，这是 Google 的使用条款要求的，请不要去掉。
 

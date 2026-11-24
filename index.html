@@ -32,10 +32,10 @@
 <div id="credits" hidden></div>
 <div id="keybox" hidden>
   <form id="key-form">
-    <h2>需要一个 Google API key</h2>
-    <p>城市画面来自 Google 写实 3D 瓦片，需要一个开通了 Map Tiles API 的 key。key 只保存在这台设备的浏览器里，不会发送到别处。</p>
-    <label for="key-input">API key</label>
-    <input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+    <h2>需要一个访问 token</h2>
+    <p>城市画面来自 Google 写实 3D 瓦片。填一个 Cesium ion 的 access token（在 ion.cesium.com 免费注册即可，不用信用卡），或一个开通了 Map Tiles API 的 Google key。它只保存在这台设备的浏览器里。</p>
+    <label for="key-input">Cesium ion token 或 Google key</label>
+    <input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="eyJ…  或  AIza…">
     <button type="submit">开始飞行</button>
     <p id="key-msg" role="status"></p>
   </form>
