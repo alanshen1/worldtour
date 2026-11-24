@@ -248,6 +248,7 @@ async function start() {
   wireUI();
   if (!SHOT && !(await keyWorks())) await askKey();
   const want = Q.get('city') || location.hash.slice(1), first = CITIES.some((c) => c.id === want) ? want : CITIES[0].id;
+  if (SHOT && Q.get('city') && first !== Q.get('city')) throw new Error(`city "${Q.get('city')}" is not in src/cities/index.js`);   // never shoot a stand-in
   $('veil-sub').textContent = `正在前往 ${CITIES[idxOf(first)].zh}…`;
   cur = await prepare(first);
   pose(cur, 0, cam.position, cam.quaternion);
