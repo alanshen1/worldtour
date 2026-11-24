@@ -1,5 +1,11 @@
-Round 2 done (auckland.js). Built: Mt Eden crater start, Sky Tower (close pass round the pod), CBD, wharves/cranes/ferry building, Harbour Bridge truss arch (over, then under), ~150 moving yachts, marinas, ferry with wake, suburbs, North Shore, Rangitoto.
-Round 2 fixed the seabed-at-y=0 bug (white z-fighting over the harbour), bigger sails, jittered houses. Verified 0.36/0.63/0.93: clean; portal hangs over the harbour in front of Rangitoto.
-Stats (--next none): ~35 calls / 582k tris / build ~1600 ms, path 4688 m, duration 50.
-Still weak: only two rounds; suburbs still read as rows from above; CBD towers are plain boxes on a grey slab; Viaduct is just marina piers; cones other than Eden are bare.
-Next: a third round on CBD/Viaduct detail and suburb layout.
+# Auckland (real tiles) — progress notes
+
+(The kit-built Auckland notes are in git history; this file now tracks the real-tiles version.)
+
+Round 1: first real route: in from the harbour north-west of the Harbour Bridge, over the bridge near Northcote, past Westhaven, over Wynyard Point / the Wynyard Quarter and the Viaduct, climb to a 170 m-radius arc round the Sky Tower pod (west → south → east, 232–242 m), down over Britomart and the port and out across the Waitematā towards Devonport / North Head. 6512 m, 64 s, lift 0.
+Weak: the start was ~1 km from the bridge (small in frame) and the bridge focus made 0.10 look straight down at water; fog hid Rangitoto; the harbour leg at the end is long.
+
+Round 2: start moved 350 m closer, bridge focus dropped (the route points straight at it); fog 0.00017 → 0.00011 so Rangitoto shows; portal raised to 75 m. Portal check with --next new-york: ring in open air mid-harbour, Devonport and Rangitoto beyond, New York inside.
+Frames: 0.02/0.06 the Harbour Bridge truss fills the frame with the CBD and Sky Tower beyond; 0.12 Westhaven + skyline; 0.30–0.40 Wynyard Quarter, Viaduct, Sky Tower ahead; 0.52/0.58 the Sky Tower pod fills the frame top to bottom; 0.72 port with Rangitoto on the horizon; 0.85–0.985 Devonport and Rangitoto.
+Final: 6234 m, 64 s, lift 0. Shot runs used: 2 (3 root loads). DONE.
+Still weak: the last ~20% is open water (Devonport/Rangitoto are 2–10 km off, small in frame); Mt Eden is not on the route.
