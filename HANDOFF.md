@@ -13,6 +13,7 @@
 - 已完成：引擎支持实景城市（`src/tiles.js`），用 3d-tiles-renderer 加载 Google 写实 3D 瓦片，可以直接用 Google key（`AIza…`），也可以经 Cesium ion（免费 token `eyJ…`，asset 2275207）。纽约已改写成实景航线（`src/cities/new-york.js`，作为其他城市的范例）。积木城市照常可用。
 - 2026-11-24 用户给了 Cesium ion token，存在 worldtour 环境的 Network secrets 里（`api.cesium.com`），代理自动注入。纽约实景版已验收：7 km、60 秒，自由女神像 → 曼哈顿南端 → 布鲁克林大桥 → 下东区上空，传送门正常，没有触发防撞抬升。
 - 北京、上海、首尔、莫斯科经试拍确认**没有** Google 3D 建筑覆盖（只有平面卫星图；首尔市中心还有 404 缺失的瓦片）。用户决定换成有覆盖的城市：北京→台北、莫斯科→罗马、上海→芝加哥、首尔→吉隆坡（吉隆坡没覆盖就换京都或拉斯维加斯）。第 7 单元子代理在先试拍、再写 `taipei.js` / `rome.js` / `chicago.js` / `kuala-lumpur.js`。合并时由协调者更新 `src/cities/index.js` 并删掉四个旧文件。
+- 檀香山、里约热内卢实景版已验收合并（2026-11-24）。迪拜也**没有** 3D 建筑（哈利法塔不存在），按同一规则换城：先试开普敦（`cape-town.js`），没覆盖就换里斯本（`lisbon.js`），第 5 单元子代理在做；合并时更新 `index.js`、删掉 `dubai.js`。
 - 尺度经验：真实地标相隔很远，航线放宽到 4–7 km、55–65 秒；否则速度太快。
 - **额度**：Cesium 免费账号每月 1000 次根瓦片；每次 `tools/shot.mjs` 运行算 1–2 次（加 `--next` 时 2 次）。一次运行里多拍几帧，少开几次。
 - 拿到 token 后的步骤：
