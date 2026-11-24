@@ -55,7 +55,8 @@ function ionPlugin(key) {
     const auth = ion.auth;
     auth.refreshToken = (options) => (auth._tokenRefreshPromise ??= fetch(auth.authURL, options)
       .then((res) => { if (!res.ok) throw new Error(`Cesium ion answered ${res.status}`); return res.json(); })
-      .then((json) => { if (json.accessToken && json.url) { auth._bearerToken = `Bearer ${json.accessToken}`; auth._bearerHostname = new URL(json.url).host; } auth._tokenRefreshPromise = null; return json; }));
+      .then((json) => { if (json.accessToken && json.url) { auth._bearerToken = `Bearer ${json.accessToken}`; auth._bearerHostname = new URL(json.url).host; } return json; })
+      .finally(() => { auth._tokenRefreshPromise = null; }));   // a failed refresh must not stick: the next call tries again
   }
   return ion;
 }
@@ -80,12 +81,13 @@ function googlePlugin(key) {
   const google = new GoogleCloudAuthPlugin({ apiToken: key, autoRefreshToken: true });
   if (!key) {
     // the library always appends key=; with no key that empty value would be rejected, so send the requests bare
-    const auth = google.auth;
+    const auth = google.auth; let rootRead = false;
     auth.fetch = async (url, options) => {
       const u = new URL(url);
       if (u.host === 'tile.googleapis.com' && auth.sessionToken) u.searchParams.set('session', auth.sessionToken);
       const res = await fetch(u, options);
-      if (auth.sessionToken === null && res.ok) { const json = await res.json(); auth.sessionToken = sessionFrom(json.root); return json; }
+      // the first answer is the root tileset: read it here for its session token (once, even if it carries none)
+      if (!rootRead && res.ok) { rootRead = true; const json = await res.json(); auth.sessionToken = sessionFrom(json.root); return json; }
       return res;
     };
   }

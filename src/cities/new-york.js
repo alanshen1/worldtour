@@ -6,6 +6,7 @@
 //   path         [lat, lon, alt] points the camera flies through; it enters at the first, the portal stands at the last
 //   focus        [u, lat, lon, alt]: what the camera turns to look at, and when (u = 0..1 along the flight, keep it in 0.08..0.78)
 //   look         sky, sun and fog (as for kit createWorld) and a tint for the photographs: a warm tint reads as late afternoon
+//                In a real city the axes are +x west, +y up, +z north: a western sun has dir x > 0.
 // Real buildings are tall and their heights are not known in advance: fly above them (the engine lifts the camera
 // when a roof comes within 28 m, and tools/shot.mjs prints that lift — a lift means the path is too low there).
 export default {
@@ -14,7 +15,7 @@ export default {
   duration: 60,
   look: {
     sky: { top: 0x3f6fb5, horizon: 0xf2cfa6, bottom: 0xc9b5a0, haze: 0.45 },
-    sun: { dir: [-0.82, 0.24, 0.3], color: 0xffd2a0, disc: 0xffe0b8, size: 0.00035 },
+    sun: { dir: [0.82, 0.24, -0.3], color: 0xffd2a0, disc: 0xffe0b8, size: 0.00035 },
     fog: { color: 0xdcc6b0, density: 0.00016 },
     tint: 0xfff1e2, exposure: 1,
   },
