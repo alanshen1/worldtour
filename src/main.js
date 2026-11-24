@@ -46,7 +46,9 @@ async function prepare(id) {
     id, meta, world: built.world, curve, focus: built.focus ?? [], duration: built.duration ?? 42, t: 0, time: 0, portal, length: curve.getLength(),
     entry: frameAt(P0, T0), exit: frameAt(P1, T1), exitInv: frameAt(P1, T1).invert(), clip: new THREE.Plane(T0.clone(), -T0.dot(P0) + 1),
     tiles: built.tiles, settle: built.settle, clear: built.clear, measured: built.measured, lift: 0,
+    aheadCam: built.prefetch ? new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far) : null,
   };
+  if (st.aheadCam) { pose(st, Math.min(1, 4 / st.duration), st.aheadCam.position, st.aheadCam.quaternion); built.prefetch(st.aheadCam); }
   // warm-up: compile the shaders and draw once into a tiny off-screen target, so nothing stalls when the portal opens
   const wcam = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far);
   wcam.position.copy(P0); wcam.quaternion.setFromRotationMatrix(st.entry); wcam.updateMatrixWorld();
@@ -107,6 +109,8 @@ function step(dt) {
   pose(st, st.t, cam.position, q1);
   cam.quaternion.slerp(q1, 1 - Math.exp(-dt * 2.4));
   cam.position.y += liftAt(st, st.t, dt);
+  // in a real city a second camera rides about four seconds ahead, so the tiles there load before the flight arrives
+  if (st.aheadCam) { st.aheadCam.aspect = cam.aspect; st.aheadCam.updateProjectionMatrix(); pose(st, Math.min(1, st.t + 4 * pace / st.duration), st.aheadCam.position, st.aheadCam.quaternion); }
 }
 const ahead = new THREE.Vector3();
 /** In a real city: how far to lift the camera above the authored path to keep it clear of real roofs. It fades out

@@ -20,6 +20,20 @@ const ROOT_URL = 'https://tile.googleapis.com/v1/3dtiles/root.json', KEY_STORE =
 // Cesium ion with an ion access token (a free account, no Google Cloud billing). ION_ASSET is Google's tileset in ion.
 const ION_ASSET = 2275207, ION_ENDPOINT = `https://api.cesium.com/v1/assets/${ION_ASSET}/endpoint`;
 const isGoogleKey = (k) => /^AIza/.test(k);
+// Detail. The library shares one tile cache and its work queues between all tilesets; two cities are open at once
+// (the current one and the one behind the portal), and with the default 0.4 GB the cache fills and loading stops,
+// leaving blurry low-detail tiles. ERROR_TARGET is the screen-space error (px) a tile may show before a finer one is
+// loaded: Google's recommended 20 suits a globe view, not a low flight past buildings.
+const ERROR_TARGET = 10, CACHE_BYTES = 1.2 * 2 ** 30;
+let tuned = false;
+function tuneShared(tiles) {
+  if (tuned) return; tuned = true;
+  tiles.lruCache.maxBytesSize = CACHE_BYTES; tiles.lruCache.minSize = 9000; tiles.lruCache.maxSize = 14000;
+  tiles.parseQueue.maxJobs = 8;
+}
+/** The resolution tiles pick their detail for: the window at up to 1.5x pixel density, whatever the engine is
+ *  currently drawing at (it lowers its drawing resolution when frames run long; detail should not drop with it). */
+const detailSize = () => { const k = Math.min(window.devicePixelRatio || 1, 1.5); return [Math.round(innerWidth * k), Math.round(innerHeight * k)]; };
 /** Which service to ask: 'google' or 'ion'. With no key at all, ?provider= picks (default ion). */
 const provider = (key) => key ? (isGoogleKey(key) ? 'google' : 'ion') : (new URLSearchParams(location.search).get('provider') === 'google' ? 'google' : 'ion');
 
@@ -62,9 +76,10 @@ function ionPlugin(key) {
 }
 function makeTiles(look) {
   const key = apiKey(), tiles = new TilesRenderer(ROOT_URL);
+  tuneShared(tiles);
   if (provider(key) === 'ion') tiles.registerPlugin(ionPlugin(key));
   else tiles.registerPlugin(googlePlugin(key));
-  tiles.registerPlugin(new TileCompressionPlugin());
+  tiles.registerPlugin(new TileCompressionPlugin({ disableMipmaps: false }));   // mipmaps keep distant textures clean
   tiles.registerPlugin(new GLTFExtensionsPlugin({ dracoLoader: dracoLoader() }));
   // photographs carry their own light: draw them unlit and untoned, tinted for the hour, and let the fog take the distance
   const tint = new THREE.Color(look.tint ?? 0xffffff);
@@ -106,11 +121,16 @@ export async function buildTilesCity(city, renderer, o = {}) {
   world.add(tiles.group);
 
   // which camera the tiles load for: the engine calls world.update with the main camera, or the portal camera
-  let active = null;
+  // plus any look-ahead cameras the engine adds, which load the tiles the flight is about to reach
+  let active = null; const extra = new Set();
   const track = (camera) => {
-    if (active !== camera) { if (active) tiles.deleteCamera(active); tiles.setCamera(camera); active = camera; }
-    camera.updateMatrixWorld(); tiles.setResolutionFromRenderer(camera, renderer); tiles.update();
+    if (active !== camera) { if (active && !extra.has(active)) tiles.deleteCamera(active); tiles.setCamera(camera); active = camera; }
+    const [w, h] = detailSize();
+    for (const c of [camera, ...extra]) { c.updateMatrixWorld(); tiles.setResolution(c, w, h); }
+    tiles.update();
   };
+  /** Keeps loading tiles for `camera` too, every frame, until the city is disposed. */
+  const prefetch = (camera) => { extra.add(camera); tiles.setCamera(camera); };
   world.onUpdate((t, dt, camera) => track(camera));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   /** Keeps loading for `camera` until nothing is left to download (true) or `ms` runs out (false). */
@@ -130,6 +150,7 @@ export async function buildTilesCity(city, renderer, o = {}) {
   const t0 = performance.now();
   while (!tiles.root && performance.now() - t0 < (o.timeout ?? 30000)) { track(probe); await sleep(80); }
   if (!tiles.root) throw new Error('the 3D tiles did not answer (check the Google key or Cesium ion token)');
+  tiles.errorTarget = ERROR_TARGET;   // after the root: the Google plugin sets its own recommendation when it loads
   probe.position.set(0, 900, 1); probe.lookAt(0, 0, 0); await settle(probe);
   tiles.group.updateMatrixWorld(true);
   const ray = new THREE.Raycaster(); ray.firstHitOnly = true;
@@ -151,7 +172,7 @@ export async function buildTilesCity(city, renderer, o = {}) {
     return (lastLift = Math.max(0, need));
   }
   tiles.deleteCamera(probe); active = null;
-  return { world, path, focus, duration: city.duration ?? 48, tiles, settle, clear, measured: { groundM: Math.round(groundM) } };
+  return { world, path, focus, duration: city.duration ?? 48, tiles, settle, clear, prefetch, measured: { groundM: Math.round(groundM) } };
 }
 
 /** The text Google asks to be shown with its tiles: the data providers for what is on screen. */
