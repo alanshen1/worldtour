@@ -1,5 +1,8 @@
 # istanbul.js handoff
+## 2026-11-24 real-tiles attempt: no 3D coverage — kept the kit-built city
+Round 1 (real tiles): wrote a kind: 'tiles' flight (Marmara → Hippodrome past the Blue Mosque → Hagia Sophia → Topkapı → Golden Horn → Galata Tower → Bosphorus, 6.8 km) and shot it once (10 frames + overview, exit 0, no lift). Every frame shows flat 2D imagery draped on terrain: the Blue Mosque, Hagia Sophia and Galata are flat photographs, no buildings stand up (~25k triangles a frame, against ~150-300k in Singapore/Oslo). Google has no photorealistic 3D for Istanbul (Turkey restricts it). Following HANDOFF ("no coverage → keep the kit version"), src/cities/istanbul.js was restored unchanged to the kit-built city. The real-tiles draft is in this note's history only: origin 41.0190, 28.9800 (water at the Golden Horn mouth, measured ground 38 m = ellipsoid height of the sea).
+
+## Kit-built version (2026-11-22)
 Round 5 — done. Changes since round 3: Hagia Sophia and the Blue Mosque enlarged 1.45x (grow() over the shared dome/minaret/block lists); path now runs between them at dome-top height then arcs round Hagia Sophia's west and north; focus holds the Blue Mosque to u 0.255 (seen against the sun, six minarets), an "ahead" key at 0.285 stops the camera pitching down between the two, Hagia Sophia from 0.325 to 0.43; all focus keys end at 0.75. Suleymaniye raised (hill 62 m, scale 2.5) and seven more skyline mosques added; houses smaller.
 Stats: calls 55-113, tris ~655k, build ~1600-1800 ms, path 4041 m, duration 48, exit 0. Portal frames (0.93, 0.985 with --next new-york) viewed: Maiden's Tower sits right of the ring, old-city domes behind, sun above.
 Weak: u ~0.85 (open Bosphorus, Asian shore) is quiet; ferries can pass under the portal; houses are stylised blocks; Suleymaniye is mostly outside the frame at the start.
-Next (if time): something on the Asian shore for u 0.8-0.9, wakes behind ferries.
