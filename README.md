@@ -6,7 +6,7 @@
 
 灵感来自 Ethan Mollick 的 [Portals](https://github.com/emollick/ai-portals)。本仓库没有使用它的代码，是按同样的思路从零写的一个小引擎。
 
-- **全部由代码生成。** 没有 3D 模型、贴图或音频文件，每座城市都是浏览器里现场搭出来的。
+- **真实的城市。** 城市画面来自 [Google 写实 3D 瓦片](https://developers.google.com/maps/documentation/tile/3d-tiles)（航拍建模），镜头沿着真实街道和地标飞行。没有 3D 覆盖的城市保留代码生成的版本。
 - **两个世界同时在跑。** 屏幕上的城市和传送门后面的城市都在实时渲染，所以穿门时没有切换、没有淡入淡出。
 - **纯静态网站。** 唯一的依赖是 [three.js](https://threejs.org)（已放在 `vendor/` 里），不需要安装或构建任何东西。
 
@@ -21,6 +21,18 @@ npm start
 然后打开 http://localhost:8000 。也可以用任何静态服务器（比如 `python3 -m http.server`），或者直接部署到 GitHub Pages：仓库 Settings → Pages → Deploy from a branch → `main` / root。
 
 在地址后加 `#tokyo` 之类可以直接从某座城市出发。
+
+## Google API key
+
+实景城市需要一个 Google Cloud API key：
+
+1. 在 Google Cloud Console 新建或选一个项目，开通 **Map Tiles API**，并为项目开通结算（Google 按请求量计费，有每月免费额度，以 Google 当前公布的价格为准；每进入一座城市大约算一次会话）。
+2. 新建一个 API key，在“应用限制”里选“网站”，只允许你自己的网址（比如 `http://localhost:8000/*` 和你的 GitHub Pages 地址）使用它。
+3. 打开网站时会弹出输入框，填进去即可。key 只保存在这台设备的浏览器里，不会进入代码仓库。也可以在网址后加 `?key=你的key`。
+
+画面里会显示 Google 和数据提供方的署名，这是 Google 的使用条款要求的，请不要去掉。
+
+这个页面不能在 claude.ai 的预览里看：那里的安全策略会拦截对 Google 的请求。请用下面的方法在本机运行，或者部署到 GitHub Pages。
 
 ## 操作
 
@@ -39,6 +51,7 @@ npm start
 ```
 index.html            页面
 src/main.js           引擎：飞行、传送门、界面
+src/tiles.js          实景城市：加载 Google 3D 瓦片、经纬度换算、等待加载、防撞抬升
 src/kit.js            搭城市用的公共积木：天空、水面、楼群、树、灯光、桥、招牌……
 src/cities/index.js   城市列表与顺序
 src/cities/*.js       每座城市一个文件
@@ -50,7 +63,9 @@ tools/shot.mjs        给某座城市沿途截图，用来检查效果
 
 ## 原理
 
-**一座城市**是 `src/cities` 里的一个文件，默认导出一个带 `build()` 的对象。`build()` 用 `kit.js` 搭好场景，返回 `{ world, path, focus, duration }`：`path` 是镜头依次经过的一串点，`focus` 是沿途要转头去看的地标，`duration` 是飞完全程的秒数。
+**一座城市**是 `src/cities` 里的一个文件。实景城市导出 `{ kind: 'tiles', lat, lon, path, focus, duration, look }`：`path` 是镜头依次经过的一串 `[纬度, 经度, 离地高度]`，`focus` 是沿途要转头去看的地标，`look` 设定天空、雾和色调。写法见 `src/cities/new-york.js`。没有 3D 覆盖的城市仍用老办法：导出一个带 `build()` 的对象，用 `kit.js` 搭出场景。
+
+真实建筑的高度没法事先精确知道，所以引擎每隔几帧向下打一条射线，离屋顶太近就把镜头平滑抬高，快到传送门时再收回。
 
 **传送门**立在飞行路线的终点。每一帧先用第二台相机把下一座城市画满整个画面，再清掉深度、画当前城市；传送门的圆面只写深度不写颜色，于是当前城市在那里被“挖”出一个洞，露出后面的下一座城市。第二台相机的位置由“镜头相对传送门的位置”换算到“下一座城市的入口”得到，所以镜头穿过圆面的那一刻，两边画面完全重合，直接换场即可。
 
@@ -60,8 +75,8 @@ tools/shot.mjs        给某座城市沿途截图，用来检查效果
 
 1. 照着 `src/cities/new-york.js` 写一个 `src/cities/<id>.js`。
 2. 在 `src/cities/index.js` 的列表里加一行。
-3. 用 `node tools/shot.mjs <id> shots --overview` 沿途截图检查（需要 Playwright 和 Chromium）。
+3. 用 `node tools/shot.mjs <id> shots --overview` 沿途截图检查（需要 Playwright 和 Chromium；实景城市要能访问 Google 瓦片服务）。
 
 ## 许可
 
-three.js 使用 MIT 许可，见 `vendor/three/LICENSE`。
+three.js 和 3d-tiles-renderer 使用各自的许可，见 `vendor/three/LICENSE` 和 `vendor/3d-tiles-renderer/LICENSE`。3D 瓦片的内容归 Google 及其数据提供方所有，按 Google Maps Platform 的条款使用。
