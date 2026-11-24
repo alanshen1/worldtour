@@ -9,7 +9,7 @@ export default {
   look: {
     // a fresh, breezy sea-light morning: clean blue sky, light sea haze, the sun in the north-east
     sky: { top: 0x3c78c4, horizon: 0xd6e8ef, bottom: 0xa4c2cc, haze: 0.45 },
-    sun: { dir: [0.55, 0.48, -0.68], color: 0xfff4e4, disc: 0xfff8ec, size: 0.00035 },
+    sun: { dir: [-0.55, 0.48, 0.68], color: 0xfff4e4, disc: 0xfff8ec, size: 0.00035 },
     fog: { color: 0xc8dce4, density: 0.00011 },
     tint: 0xf4f8ff, exposure: 1,
   },

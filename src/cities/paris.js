@@ -8,7 +8,7 @@ export default {
   duration: 64,
   look: {
     sky: { top: 0x6a7fb8, horizon: 0xf3d2c0, bottom: 0xc7b0a4, haze: 0.42 },
-    sun: { dir: [-0.85, 0.22, 0.45], color: 0xffcfa8, disc: 0xffdcc0, size: 0.0004 },
+    sun: { dir: [0.85, 0.22, -0.45], color: 0xffcfa8, disc: 0xffdcc0, size: 0.0004 },
     fog: { color: 0xe2c9bc, density: 0.0002 },
     tint: 0xffefe4, exposure: 1,
   },

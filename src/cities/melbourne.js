@@ -9,7 +9,7 @@ export default {
   look: {
     // a cool, soft Melbourne morning: pale sky, a little haze, the sun low in the north-east
     sky: { top: 0x5f82ad, horizon: 0xdfe4ea, bottom: 0xb4bcc6, haze: 0.5 },
-    sun: { dir: [0.62, 0.42, -0.66], color: 0xfff2e2, disc: 0xfff6ea, size: 0.00035 },
+    sun: { dir: [-0.62, 0.42, 0.66], color: 0xfff2e2, disc: 0xfff6ea, size: 0.00035 },
     fog: { color: 0xcdd5de, density: 0.0002 },
     tint: 0xeef2fc, exposure: 1,
   },

@@ -9,7 +9,7 @@ export default {
   look: {
     // a clear, bright harbour afternoon; the sun stands in the north-west (southern hemisphere)
     sky: { top: 0x2f6fc8, horizon: 0xd8e6f2, bottom: 0xa9bfd0, haze: 0.4 },
-    sun: { dir: [-0.55, 0.5, -0.67], color: 0xfff0d8, disc: 0xfff4e0, size: 0.0004 },
+    sun: { dir: [0.55, 0.5, 0.67], color: 0xfff0d8, disc: 0xfff4e0, size: 0.0004 },
     fog: { color: 0xcfdbe6, density: 0.00014 },
     tint: 0xfff8ee, exposure: 1,
   },
