@@ -1,7 +1,7 @@
 // The tour, in flying order. Each city is one file in this folder, loaded only when it is about to be needed.
 // To add a city: write src/cities/<id>.js (see new-york.js for the shape of one) and add a line here.
 // A city whose file is missing or fails to build is skipped, and the tour flies on to the one after it.
-// Cities without Google 3D coverage (Beijing, Shanghai, Seoul, Moscow, Dubai, Istanbul) were replaced by covered ones.
+// Cities without Google 3D coverage (Beijing, Shanghai, Seoul, Moscow, Dubai, Istanbul, Kuala Lumpur) were replaced by covered ones.
 export const CITIES = [
   { id: 'new-york', zh: '纽约', en: 'New York', where: '美国', line: '暮色中的曼哈顿' },
   { id: 'london', zh: '伦敦', en: 'London', where: '英国', line: '泰晤士河上的钟声' },
@@ -19,7 +19,7 @@ export const CITIES = [
   { id: 'washington', zh: '华盛顿', en: 'Washington, D.C.', where: '美国', line: '樱花季的国家广场' },
   { id: 'chicago', zh: '芝加哥', en: 'Chicago', where: '美国', line: '芝加哥河上的高楼峡谷' },
   { id: 'fukuoka', zh: '福冈', en: 'Fukuoka', where: '日本', line: '福冈塔与那珂川' },
-  { id: 'kuala-lumpur', zh: '吉隆坡', en: 'Kuala Lumpur', where: '马来西亚', line: '双子塔下' },
+  { id: 'kyoto', zh: '京都', en: 'Kyoto', where: '日本', line: '清水寺与八坂塔' },
   { id: 'hong-kong', zh: '香港', en: 'Hong Kong', where: '中国', line: '维多利亚港两岸' },
   { id: 'cape-town', zh: '开普敦', en: 'Cape Town', where: '南非', line: '桌山脚下的港湾' },
   { id: 'rio', zh: '里约热内卢', en: 'Rio de Janeiro', where: '巴西', line: '基督像下的海湾' },
