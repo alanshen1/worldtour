@@ -11,10 +11,9 @@
 用户觉得积木城市“效果不太好”，要真实的场景。已批准的计划见 `/root/.claude/plans/functional-finding-torvalds.md`（会话本地文件；要点如下）。
 
 - 已完成：引擎支持实景城市（`src/tiles.js`），用 3d-tiles-renderer 加载 Google 写实 3D 瓦片，可以直接用 Google key（`AIza…`），也可以经 Cesium ion（免费 token `eyJ…`，asset 2275207）。纽约已改写成实景航线（`src/cities/new-york.js`，作为其他城市的范例）。积木城市照常可用。
-- **卡住的地方：还没有 token，纽约的实景版没有跑过。** 用户暂时申请不了 Google key，改走 Cesium ion，但还没把 token 交给本环境。
-  - worldtour 云端环境已放行 `tile.googleapis.com` 和 `api.cesium.com`。
-  - 用户可以在环境设置的 Network secrets 里为 `api.cesium.com` 加一条 `Authorization: Bearer <token>`，之后容器里的截图工具不需要 key 就能加载瓦片（代理会注入）。
-  - 也可以在自己的浏览器里本地 `npm start`，在页面弹出的输入框里填 token。
+- 2026-11-24 用户给了 Cesium ion token，存在 worldtour 环境的 Network secrets 里（`api.cesium.com`），代理自动注入。纽约实景版已验收：7 km、60 秒，自由女神像 → 曼哈顿南端 → 布鲁克林大桥 → 下东区上空，传送门正常，没有触发防撞抬升。
+- 尺度经验：真实地标相隔很远，航线放宽到 4–7 km、55–65 秒；否则速度太快。
+- **额度**：Cesium 免费账号每月 1000 次根瓦片；每次 `tools/shot.mjs` 运行算 1–2 次（加 `--next` 时 2 次）。一次运行里多拍几帧，少开几次。
 - 拿到 token 后的步骤：
   1. `node tools/shot.mjs new-york shots --next none --overview` 验收纽约，看 `lift=`（大说明航线太低）和 `TILES-NOT-LOADED`。
   2. 启动 7 个子代理改写其余 22 座城市（分组和统一说明见计划文件）。北京、上海、首尔、莫斯科先查 3D 覆盖，没有就保留积木版。
