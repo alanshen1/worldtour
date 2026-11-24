@@ -9,7 +9,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='%23081020' stroke='%239fd0ff' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./src/ui.css">
 <script type="importmap">
-{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+{ "imports": {
+  "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/",
+  "3d-tiles-renderer": "./vendor/3d-tiles-renderer/index.js", "3d-tiles-renderer/plugins": "./vendor/3d-tiles-renderer/index.plugins.js"
+} }
 </script>
 </head>
 <body>
@@ -26,6 +29,17 @@
   <button id="b-full" title="全屏 (F)" aria-label="全屏">⛶</button>
 </div>
 <div id="menu" hidden><div id="cities"></div></div>
+<div id="credits" hidden></div>
+<div id="keybox" hidden>
+  <form id="key-form">
+    <h2>需要一个 Google API key</h2>
+    <p>城市画面来自 Google 写实 3D 瓦片，需要一个开通了 Map Tiles API 的 key。key 只保存在这台设备的浏览器里，不会发送到别处。</p>
+    <label for="key-input">API key</label>
+    <input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+    <button type="submit">开始飞行</button>
+    <p id="key-msg" role="status"></p>
+  </form>
+</div>
 <script type="module" src="./src/main.js"></script>
 <script nomodule>document.getElementById('veil-sub').textContent = '这个浏览器太旧了，无法显示';</script>
 </body>

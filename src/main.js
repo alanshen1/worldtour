@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { setRenderer, glowMat } from './kit.js';
 import { CITIES, loadCity } from './cities/index.js';
+import { buildTilesCity, attributions, setApiKey, keyWorks } from './tiles.js';
 
 const $ = (id) => document.getElementById(id);
 const Q = new URLSearchParams(location.search), SHOT = Q.has('shot');
@@ -12,7 +13,7 @@ renderer.autoClear = false; renderer.toneMapping = THREE.ACESFilmicToneMapping; 
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 setRenderer(renderer);
 const MAX_RATIO = Math.min(window.devicePixelRatio || 1, 2); let ratio = SHOT ? 1 : MAX_RATIO;
-const cam = new THREE.PerspectiveCamera(60, 1, 0.5, 9000), pcam = cam.clone();
+const cam = new THREE.PerspectiveCamera(60, 1, 1, 20000), pcam = cam.clone();
 const warmRT = new THREE.WebGLRenderTarget(32, 32);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(ratio); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -34,7 +35,9 @@ function makePortal() {
 }
 async function prepare(id) {
   const meta = CITIES.find((c) => c.id === id), t0 = performance.now();
-  const city = await loadCity(id), built = city.build();
+  const city = await loadCity(id);
+  // a real city streams Google 3D tiles; a built one comes from the kit (and stays as the fallback where there is no 3D coverage)
+  const built = city.kind === 'tiles' ? await buildTilesCity(city, renderer, { timeout: SHOT ? 120000 : 30000 }) : city.build();
   const pts = built.path.map((p) => new THREE.Vector3(...p));
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'); curve.arcLengthDivisions = 600;
   const P0 = curve.getPointAt(0), T0 = curve.getTangentAt(0).normalize(), P1 = curve.getPointAt(1), T1 = curve.getTangentAt(1).normalize();
@@ -42,15 +45,20 @@ async function prepare(id) {
   const st = {
     id, meta, world: built.world, curve, focus: built.focus ?? [], duration: built.duration ?? 42, t: 0, time: 0, portal, length: curve.getLength(),
     entry: frameAt(P0, T0), exit: frameAt(P1, T1), exitInv: frameAt(P1, T1).invert(), clip: new THREE.Plane(T0.clone(), -T0.dot(P0) + 1),
+    tiles: built.tiles, settle: built.settle, clear: built.clear, measured: built.measured, lift: 0,
   };
   // warm-up: compile the shaders and draw once into a tiny off-screen target, so nothing stalls when the portal opens
-  pcam.position.copy(P0); pcam.quaternion.setFromRotationMatrix(st.entry); pcam.updateMatrixWorld();
-  st.world.follow(pcam, T0);
-  try { await renderer.compileAsync(st.world.scene, pcam); } catch (e) { /* older browsers: compile on first draw */ }
-  renderer.setRenderTarget(warmRT); renderer.render(st.world.scene, pcam); renderer.setRenderTarget(null);
+  const wcam = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far);
+  wcam.position.copy(P0); wcam.quaternion.setFromRotationMatrix(st.entry); wcam.updateMatrixWorld();
+  if (st.settle) await st.settle(wcam);   // the view through the portal is loaded before the portal may open
+  st.world.follow(wcam, T0);
+  try { await renderer.compileAsync(st.world.scene, wcam); } catch (e) { /* older browsers: compile on first draw */ }
+  renderer.setRenderTarget(warmRT); renderer.render(st.world.scene, wcam); renderer.setRenderTarget(null);
   st.buildMs = Math.round(performance.now() - t0);
   return st;
 }
+
+function dispose(st) { st.tiles?.dispose(); st.world.dispose(); }
 
 // ---------------------------------------------------------------- the flight
 let cur = null, next = null, nextLoading = null, queued = null, paused = false, hurry = false, pace = 1, openAmt = 0;
@@ -59,7 +67,7 @@ function loadNext(tries = 0) {
   if (nextLoading || next || tries >= CITIES.length) return;
   const id = queued ?? CITIES[(idxOf(cur.id) + 1 + tries) % CITIES.length].id; queued = null;
   if (id === cur.id) return loadNext(tries + 1);
-  const job = nextLoading = prepare(id).then((st) => { if (nextLoading === job) { next = st; nextLoading = null; showNextHint(); } else st.world.dispose(); })
+  const job = nextLoading = prepare(id).then((st) => { if (nextLoading === job) { next = st; nextLoading = null; showNextHint(); } else dispose(st); })
     .catch((e) => { console.warn(`city "${id}" could not be built:`, e); if (nextLoading === job) { nextLoading = null; loadNext(tries + 1); } });
 }
 /** Where the camera wants to be and look at flight position u (0..1). Writes pos into `outPos`, the look rotation into `outQ`. */
@@ -86,7 +94,8 @@ function pose(st, u, outPos, outQ) {
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 function step(dt) {
   const st = cur; st.time += dt; st.world.update(st.time, dt, cam);
-  if (next) { next.time += dt; next.world.update(next.time, dt, pcam); }
+  // the next city only needs updating while it is seen; before that its tiles stay as loaded for the entry
+  if (next && openAmt > 0) { next.time += dt; next.world.update(next.time, dt, pcam); }
   // the portal opens late in the flight, once the next city is ready; the flight waits in front of it if it is not
   const wantOpen = next && st.t > 0.66;
   openAmt = THREE.MathUtils.clamp(openAmt + (wantOpen ? dt / 2.2 : -dt * 2), 0, 1);
@@ -97,24 +106,40 @@ function step(dt) {
   st.t = Math.min(st.t, 1);
   pose(st, st.t, cam.position, q1);
   cam.quaternion.slerp(q1, 1 - Math.exp(-dt * 2.4));
+  cam.position.y += liftAt(st, st.t, dt);
+}
+const ahead = new THREE.Vector3();
+/** In a real city: how far to lift the camera above the authored path to keep it clear of real roofs. It fades out
+ * before the portal, so the camera always passes through the ring. dt 0 means jump straight to the answer. */
+function liftAt(st, u, dt) {
+  if (!st.clear) return 0;
+  st.curve.getPointAt(Math.min(1, u + 60 / st.length), ahead);
+  const want = st.clear(cam.position, ahead, 28, dt ? 4 : 1) * (1 - THREE.MathUtils.smoothstep(u, 0.86, 0.95));
+  st.lift = dt ? st.lift + (want - st.lift) * (1 - Math.exp(-dt * 1.6)) : want;
+  return st.lift;
 }
 function cross() {
   // carry the camera's exact place relative to the portal into the next city, so there is no cut
   cam.updateMatrixWorld(); m2.copy(next.entry).multiply(cur.exitInv).multiply(cam.matrixWorld);
   m2.decompose(cam.position, cam.quaternion, v1);
-  const old = cur; cur = next; next = null; openAmt = 0; hurry = false; cur.t = 0;
-  setTimeout(() => old.world.dispose(), 50);
+  const old = cur; cur = next; next = null; openAmt = 0; hurry = false; cur.t = 0; cur.lift = 0;
+  setTimeout(() => dispose(old), 50);
   arrived(); setTimeout(loadNext, 1200);
 }
 const fwd = new THREE.Vector3();
+/** The portal camera: where the main camera would be if the portal's ring were the next city's entry. */
+function portalCam() {
+  pcam.projectionMatrix.copy(cam.projectionMatrix); pcam.projectionMatrixInverse.copy(cam.projectionMatrixInverse);
+  pcam.aspect = cam.aspect; pcam.near = cam.near; pcam.far = cam.far;
+  cam.updateMatrixWorld(); m2.copy(next.entry).multiply(cur.exitInv).multiply(cam.matrixWorld); m2.decompose(pcam.position, pcam.quaternion, v1); pcam.updateMatrixWorld();
+}
 function draw() {
   cam.updateMatrixWorld(); renderer.clear();
   const portal = cur.portal, open = next && openAmt > 0.001;
   portal.visible = !!open;
   if (open) {
     const s = easeOut(openAmt); portal.scale.setScalar(Math.max(s, 0.001)); portal.userData.sparks.rotation.z = cur.time * 0.5;
-    pcam.projectionMatrix.copy(cam.projectionMatrix); pcam.projectionMatrixInverse.copy(cam.projectionMatrixInverse);
-    m2.copy(next.entry).multiply(cur.exitInv).multiply(cam.matrixWorld); m2.decompose(pcam.position, pcam.quaternion, v1); pcam.updateMatrixWorld();
+    portalCam();
     next.world.follow(pcam, pcam.getWorldDirection(fwd));
     renderer.clippingPlanes = [next.clip]; renderer.toneMappingExposure = next.world.exposure;
     renderer.render(next.world.scene, pcam);
@@ -142,7 +167,7 @@ function showNextHint() { if (next) { $('next').textContent = `下一站 · ${ne
 function jumpTo(id) {
   if (!cur || id === cur.id) return;
   if (next && next.id === id) { hurry = true; return; }
-  if (next) { next.world.dispose(); next = null; openAmt = 0; }
+  if (next) { dispose(next); next = null; openAmt = 0; }
   nextLoading = null; queued = id; hurry = true; $('next').classList.remove('on'); loadNext();
 }
 const sound = (() => {
@@ -189,13 +214,31 @@ function wireUI() {
 }
 
 // ---------------------------------------------------------------- start
-let last = 0, slow = 0, fast = 0;
+let last = 0, slow = 0, fast = 0, creditTick = 0;
+/** Google's terms ask for its name and the data providers to be on screen whenever its tiles are. */
+function showCredits() {
+  const el = $('credits'); if (!cur?.tiles) { el.hidden = true; return; }
+  const a = attributions(cur.tiles); el.textContent = 'Google' + (a ? ' · ' + a : ''); el.hidden = false;
+}
+/** Shows the key box until a key that works is entered. The key stays in this browser only. */
+function askKey() {
+  return new Promise((done) => {
+    const box = $('keybox'), input = $('key-input'), msg = $('key-msg'); box.hidden = false; $('veil-sub').textContent = '需要一个 Google API key';
+    $('key-form').onsubmit = async (e) => {
+      e.preventDefault(); const k = input.value.trim(); if (!k) return;
+      msg.textContent = '正在检查…';
+      if (await keyWorks(k)) { setApiKey(k); box.hidden = true; done(); } else msg.textContent = '这个 key 不能用：请确认它已开通 Map Tiles API，并允许当前网址使用。';
+    };
+    input.focus();
+  });
+}
 function loop(now) {
   requestAnimationFrame(loop);
   const raw = Math.max(0, (now - last) / 1000); last = now; const dt = Math.min(raw, 0.1);
   if (!cur) return;
   if (!paused) step(dt);
   draw();
+  if ((creditTick += raw) > 1) { creditTick = 0; showCredits(); }
   // keep the flight smooth: lower the drawing resolution when frames run long, raise it again when there is room
   if (raw > 0.03) { slow++; fast = 0; } else if (raw < 0.014) { fast++; slow = Math.max(0, slow - 1); }
   if (slow > 50 && ratio > 0.6) { ratio = Math.max(0.6, ratio * 0.85); slow = 0; resize(); if (ratio <= 0.75) renderer.shadowMap.enabled = false; }
@@ -203,11 +246,12 @@ function loop(now) {
 }
 async function start() {
   wireUI();
+  if (!SHOT && !(await keyWorks())) await askKey();
   const want = Q.get('city') || location.hash.slice(1), first = CITIES.some((c) => c.id === want) ? want : CITIES[0].id;
   $('veil-sub').textContent = `正在前往 ${CITIES[idxOf(first)].zh}…`;
   cur = await prepare(first);
   pose(cur, 0, cam.position, cam.quaternion);
-  $('veil').classList.add('gone'); arrived();
+  $('veil').classList.add('gone'); arrived(); showCredits();
   if (SHOT) return shotMode();
   loadNext(); last = performance.now(); requestAnimationFrame(loop);
 }
@@ -218,9 +262,8 @@ async function shotMode() {
   let debugLine = null;
   window.__tour = {
     buildMs: cur.buildMs,
-    shot(t, overview) {
-      cur.t = t; cur.time = t * cur.duration; cur.world.update(cur.time, 0.016, cam);
-      if (next) next.world.update(t * 5, 0.016, pcam);
+    async shot(t, overview) {
+      cur.t = t; cur.time = t * cur.duration;
       openAmt = next ? THREE.MathUtils.clamp((t - 0.66) * cur.duration / 2.2, 0, 1) : 0;
       if (debugLine) debugLine.visible = !!overview;
       if (overview) {
@@ -229,8 +272,16 @@ async function shotMode() {
         const a = (typeof overview === 'number' ? overview : 0.6);
         cam.position.set(c.x + Math.sin(a) * r * 1.1, c.y + r * 1.0, c.z + Math.cos(a) * r * 1.1); cam.lookAt(c);
       } else pose(cur, t, cam.position, cam.quaternion);
+      // a real city: wait for the tiles in view, lift clear of roofs as the flight would, and wait again
+      let loaded = true, lift = 0;
+      if (cur.settle) {
+        loaded = await cur.settle(cam, 120000);
+        if (!overview) { lift = liftAt(cur, t, 0); if (lift > 0.5) { cam.position.y += lift; loaded = await cur.settle(cam, 120000); } }
+      }
+      cur.world.update(cur.time, 0.016, cam);
+      if (next && openAmt > 0.001) { portalCam(); if (next.settle) await next.settle(pcam, 120000); next.world.update(t * 5, 0.016, pcam); }
       renderer.info.autoReset = false; renderer.info.reset(); draw();
-      return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, buildMs: cur.buildMs, pathLength: Math.round(cur.length), next: next?.id ?? null };
+      return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, buildMs: cur.buildMs, pathLength: Math.round(cur.length), next: next?.id ?? null, loaded, lift: Math.round(lift), groundM: cur.measured?.groundM };
     },
   };
 }
