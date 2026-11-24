@@ -1,5 +1,5 @@
-Tokyo — round 4 (final)
-- Changed since round 3: moon light less blue and a little weaker (roofs no longer saturated blue); portal framing checked with --next new-york (ring hangs over the scramble crossing, Fuji behind it).
-- Stats (tools/shot.mjs, --next none): see final report; roughly 45–135 calls, 146–182k tris, build 1.3–1.7 s, path 4625 m. Exit code 0, no page errors.
-- Still weak: Skytree pass at u≈0.55–0.62 is a close look up the shaft, not a full silhouette (the full tower is seen from u≈0.25–0.5); crossing crowd is small glowing boxes; corner screens are flat colour-cycling panels.
-- Next, if more time: widen the Skytree pass, give the screens moving content, add a train on a viaduct across the canyon.
+# Tokyo (real 3D tiles) — progress notes
+Round 1 (shot run 1): harbour off Odaiba -> over the Rainbow Bridge midspan -> Shibaura -> close arc round Tokyo Tower (east and north side, ~250-300 m) -> past Azabudai Hills Mori JP Tower -> portal over Roppongi facing Shinjuku. Path 5697 m, 62 s, origin on harbour water (ground=37 m = sea level). No lift. Weak: last frame grazed Izumi Garden Tower roof.
+Round 2 (shot run 2): tail moved north and raised to 270-330 m; tower arc tightened. Path 5673 m, no lift. Frames: 0.15 Rainbow Bridge close, 0.55-0.65 Tokyo Tower big, 0.75 Azabudai Hills tower, 0.97 Shinjuku far ahead in open air. Weak: 0.3-0.45 Shibaura stretch is ordinary city; Skytree not included (too far east).
+Round 3 (shot run 3): final check with --next new-york: ring over Roppongi in open air, Shinjuku towers on the horizon, New York inside. No lift anywhere. Path 5673 m, 62 s.
+DONE. Shot runs used: 3 (4 root loads).
