@@ -6,6 +6,20 @@
 
 23 座城市按 `src/cities/index.js` 的顺序循环飞行，每座城市结尾的传送门里实时显示下一座。全部完成并通过验收后，给每座城市沿途截图，整理成一页发给用户看。
 
+## 2026-11-24 改为真实 3D 实景（进行中）
+
+用户觉得积木城市“效果不太好”，要真实的场景。已批准的计划见 `/root/.claude/plans/functional-finding-torvalds.md`（会话本地文件；要点如下）。
+
+- 已完成：引擎支持实景城市（`src/tiles.js`），用 3d-tiles-renderer 加载 Google 写实 3D 瓦片，可以直接用 Google key（`AIza…`），也可以经 Cesium ion（免费 token `eyJ…`，asset 2275207）。纽约已改写成实景航线（`src/cities/new-york.js`，作为其他城市的范例）。积木城市照常可用。
+- **卡住的地方：还没有 token，纽约的实景版没有跑过。** 用户暂时申请不了 Google key，改走 Cesium ion，但还没把 token 交给本环境。
+  - worldtour 云端环境已放行 `tile.googleapis.com` 和 `api.cesium.com`。
+  - 用户可以在环境设置的 Network secrets 里为 `api.cesium.com` 加一条 `Authorization: Bearer <token>`，之后容器里的截图工具不需要 key 就能加载瓦片（代理会注入）。
+  - 也可以在自己的浏览器里本地 `npm start`，在页面弹出的输入框里填 token。
+- 拿到 token 后的步骤：
+  1. `node tools/shot.mjs new-york shots --next none --overview` 验收纽约，看 `lift=`（大说明航线太低）和 `TILES-NOT-LOADED`。
+  2. 启动 7 个子代理改写其余 22 座城市（分组和统一说明见计划文件）。北京、上海、首尔、莫斯科先查 3D 覆盖，没有就保留积木版。
+  3. 合并、全程连飞、重拍图集。
+
 ## 2026-11-22 用户的新要求
 
 1. 关卡名要具体到城市，让人一看名字就想到那座城市的天际线：
