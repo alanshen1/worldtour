@@ -3,8 +3,9 @@
 import * as THREE from 'three';
 import { setRenderer, glowMat } from './kit.js';
 import { CITIES, loadCity } from './cities/index.js';
-import { buildTilesCity, attributions, setApiKey, keyWorks, isIonProvider } from './tiles.js';
+import { buildTilesCity, attributions, setApiKey, keyWorks, isIonProvider, cacheInfo } from './tiles.js';
 import { buildOsmCity } from './osm.js';
+import { PERF, perfAdd, perfTime, perfFrame, perfSource } from './perf.js';
 
 const $ = (id) => document.getElementById(id);
 const Q = new URLSearchParams(location.search), SHOT = Q.has('shot');
@@ -167,8 +168,10 @@ async function warmDrawGradually(st, wcam, signal, perFrame = 8) {
       const end = Math.min(i + perFrame, items.length);
       for (let j = i; j < end; j++) items[j].visible = true;
       renderer.clippingPlanes = [st.clip];
+      const t0 = PERF ? performance.now() : 0;
       try { renderer.setRenderTarget(warmRT); renderer.render(scene, wcam); }
       finally { renderer.setRenderTarget(null); renderer.clippingPlanes = []; }
+      if (PERF) perfAdd('warm', performance.now() - t0);
       for (let j = i; j < end; j++) items[j].visible = false;
       await new Promise((r) => requestAnimationFrame(r));
     }
@@ -255,7 +258,12 @@ async function prepare(id, signal, { urgent = false, mode = renderMode, at = 0 }
     if (!SHOT && st.tiles) st.tiles.errorTarget = 14;
     await st.settle(wcam, SHOT ? 120000 : 12000, signal);
     if (!SHOT && st.tiles && savedErr !== undefined) st.tiles.errorTarget = savedErr;
+    // The first city, and a city rebuilt by a mode switch, are looked at the moment the veil lifts, and nothing is
+    // flying meanwhile: give them up to 5 s more to load that first view at full detail, so it opens sharp.
+    // (A next city gets the same from refineNext() while it waits behind the portal.)
+    if (!SHOT && st.tiles && (!cur || at > 0) && !signal?.aborted) await st.settle(wcam, 5000, signal);
   }
+  st.wcam = wcam;   // refineNext() goes on loading this view
   if (signal?.aborted) { dispose(st); const e = new Error('aborted'); e.name = 'AbortError'; throw e; }
   st.world.follow(wcam, wcam.getWorldDirection(v1));
 
@@ -371,17 +379,32 @@ function step(dt) {
   // Move camera first so tiles and scene updaters run on the exact same pose draw() will render
   pose(st, st.t, cam.position, q1);
   cam.quaternion.slerp(q1, 1 - Math.exp(-dt * 2.4));
-  cam.position.y += liftAt(st, st.t, dt);
+  cam.position.y += PERF ? perfTime('roof', () => liftAt(st, st.t, dt)) : liftAt(st, st.t, dt);
   cam.updateMatrixWorld();
 
   syncTilePriorities();
-  st.world.update(st.time, dt, cam, updateAheadCam(st));
-  // the next city only needs updating while it is seen; compute pcam first so frame 1 uses the real portal pose
+  const aheadC = updateAheadCam(st);
+  if (PERF) perfTime('tiles', () => st.world.update(st.time, dt, cam, aheadC)); else st.world.update(st.time, dt, cam, aheadC);
+  // the next city is updated every frame only while it is seen; compute pcam first so frame 1 uses the real portal pose
   if (next && openAmt > 0.001) {
     portalCam();
-    next.time += dt; next.world.update(next.time, dt, pcam);
-  }
+    next.time += dt;
+    if (PERF) perfTime('tiles', () => next.world.update(next.time, dt, pcam)); else next.world.update(next.time, dt, pcam);
+  } else if (next) refineNext(dt);
   dirty = true;
+}
+/**
+ * A city waiting behind the closed portal was loaded quickly and coarsely (prepare() settles it at errorTarget 14, so
+ * that it is ready in time). Left like that, the first seconds after the crossing are blurred while the fine tiles
+ * arrive. So while it waits it goes on loading the view its entry will show, at full detail: a few times a second,
+ * and at the lowest download priority (syncTilePriorities), behind everything the city being flown asks for.
+ */
+const REFINE_EVERY = 0.25;
+function refineNext(dt) {
+  if (SHOT || !next.tiles || !next.wcam) return;
+  if ((next.refineWait = (next.refineWait ?? 0) + dt) < REFINE_EVERY) return;
+  next.refineWait = 0;
+  if (PERF) perfTime('nextRefine', () => next.world.update(next.time, 0, next.wcam)); else next.world.update(next.time, 0, next.wcam);
 }
 const ahead = new THREE.Vector3();
 /** In a real city: how far to lift the camera above the authored path to keep it clear of real roofs. It fades out
@@ -468,6 +491,7 @@ function setPortalScissor(sc) {
 
 function draw() {
   cam.updateMatrixWorld();
+  if (PERF) renderer.info.reset();   // with ?debug the counters cover the whole frame (see perfSource below)
   if (postRT) { postRT.scissorTest = false; renderer.setRenderTarget(postRT); }
   else renderer.setRenderTarget(null);
   renderer.setScissorTest(false); renderer.clear();
@@ -666,8 +690,9 @@ function loop(now) {
   const raw = Math.max(0, (now - last) / 1000); last = now; const dt = Math.min(raw, 0.1);
   if (!paused) {
     step(dt);
-    draw();
+    if (PERF) perfTime('draw', draw); else draw();
     dirty = false;
+    perfFrame(raw * 1000, now);
     // keep the flight smooth without sacrificing sharpness: only step pixel ratio down on sustained < 33 fps
     if (raw < 0.15) {
       avgMs = avgMs * 0.92 + raw * 1000 * 0.08;
@@ -692,6 +717,18 @@ function loop(now) {
     }
   }
   if ((creditTick += raw) > 1) { creditTick = 0; showCredits(); }
+}
+// ?debug: what the readout in src/perf.js shows beside the timings, read from the engine once a second
+if (PERF) {
+  renderer.info.autoReset = false;   // draw() resets the counters itself, so they cover a whole frame and not its last pass
+  perfSource(() => ({
+    city: cur?.id, mode: cur?.mode, t: cur ? Math.round(cur.t * 100) / 100 : null, pace, hurry,
+    next: next?.id ?? (nextLoading ? 'loading' : null),
+    calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
+    geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs?.length,
+    tiles: cur?.tiles ? { ...cur.tiles.stats } : null, cache: cacheInfo(),
+    ratio, size: `${Math.round(viewW * ratio)}x${Math.round(viewH * ratio)}`, errorTarget: cur?.tiles?.errorTarget,
+  }));
 }
 async function start() {
   wireUI();

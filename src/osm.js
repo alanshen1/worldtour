@@ -10,7 +10,8 @@ import {
   ImageOverlayPlugin, CesiumIonOverlay,
 } from '3d-tiles-renderer/plugins';
 import { createWorld } from './kit.js';
-import { apiKey, configureSharedQueues, dracoLoader } from './tiles.js';
+import { apiKey, configureSharedQueues, cacheBudgetMB, dracoLoader } from './tiles.js';
+import { PERF, perfAdd } from './perf.js';
 import { getLandmarkExclusions, placeHeroLandmarks } from './landmarks.js';
 
 const D2R = Math.PI / 180;
@@ -184,6 +185,7 @@ function osmBuildingsPlugin(baseMat, exclusions, osmTiles) {
     name: 'OSM_PBR_BUILDINGS_PLUGIN',
     priority: -50,
     processTileModel(scene) {
+      const t0 = PERF ? performance.now() : 0;
       osmTiles.group.updateMatrixWorld(true);
       scene.updateMatrixWorld(true);
       scene.traverse((o) => {
@@ -265,6 +267,7 @@ function osmBuildingsPlugin(baseMat, exclusions, osmTiles) {
         o.castShadow = true;
         o.receiveShadow = true;
       });
+      if (PERF) perfAdd('osmTile', performance.now() - t0);
     },
   };
 }
@@ -340,8 +343,13 @@ export async function buildOsmCity(city, renderer, o = {}) {
   terrainTiles.loadSiblings = true;
   terrainTiles.userData = { priority: typeof o.priority === 'number' ? o.priority : 0 };
   terrainTiles.registerPlugin(makeIonPlugin(key, ION_TERRAIN_ASSET));
+  // resolution: the pixels of aerial photo each terrain tile gets. A terrain tile is refined by the error of its shape,
+  // not by how sharp its photo is, and at the library's 256 one photo pixel covers about two pixels on screen even when
+  // everything has loaded: the ground looks soft. 512 brings it to about one. Four times the texture memory, so only
+  // where the tile cache is large enough to hold it.
   terrainTiles.registerPlugin(new ImageOverlayPlugin({
     overlays: [new CesiumIonOverlay({ apiToken: key, assetId: ION_IMAGERY_ASSET, autoRefreshToken: true })],
+    resolution: cacheBudgetMB(!!o.shot) >= 768 || o.shot ? 512 : 256,
   }));
   terrainTiles.registerPlugin(new ReorientationPlugin({ lat: city.lat * D2R, lon: city.lon * D2R, height: 0 }));
   terrainTiles.registerPlugin(terrainShadowPlugin());
@@ -380,13 +388,11 @@ export async function buildOsmCity(city, renderer, o = {}) {
       set priority(v) { osmTiles.userData.priority = v; terrainTiles.userData.priority = v; },
     },
     get loadProgress() { return Math.min(terrainTiles.loadProgress, osmTiles.loadProgress); },
-    get stats() {
-      const a = terrainTiles.stats ?? {}, b = osmTiles.stats ?? {};
-      return {
-        queued: (a.queued || 0) + (b.queued || 0),
-        downloading: (a.downloading || 0) + (b.downloading || 0),
-        parsing: (a.parsing || 0) + (b.parsing || 0),
-      };
+    get stats() {   // every counter of the two tilesets added up (queued, downloading, parsing, visible, refused ...)
+      const a = terrainTiles.stats ?? {}, b = osmTiles.stats ?? {}, s = {};
+      for (const k in a) if (typeof a[k] === 'number') s[k] = a[k];
+      for (const k in b) if (typeof b[k] === 'number') s[k] = (s[k] || 0) + b[k];
+      return s;
     },
     get errorTarget() { return osmTiles.errorTarget; },
     set errorTarget(v) { osmTiles.errorTarget = v; },

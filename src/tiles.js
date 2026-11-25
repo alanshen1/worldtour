@@ -20,6 +20,7 @@ import {
 } from '3d-tiles-renderer/plugins';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createWorld } from './kit.js';
+import { PERF, perfAdd } from './perf.js';
 
 const ROOT_URL = 'https://tile.googleapis.com/v1/3dtiles/root.json', KEY_STORE = 'worldtour.googleKey', D2R = Math.PI / 180;
 // The same Google tiles can come two ways: straight from Google with a Map Tiles API key (they start "AIza"), or through
@@ -39,32 +40,43 @@ const activeFirstPriority = (a, b) => {
   if (pa !== pb) return pa - pb;   // PriorityQueue pops from the end, so higher priority runs first
   return unifiedPriorityCallback(a, b);
 };
+/**
+ * How many megabytes of tiles (geometry and textures, as the library counts them) all cities together may keep.
+ * When the cache is full the library REFUSES new tiles, and whatever they would have sharpened stays blurred, so the
+ * budget follows the machine: ?cache=<MB> sets it by hand (128..4096), otherwise it goes by navigator.deviceMemory
+ * (GB of RAM; Chrome only, and it never reports more than 8). What the page really uses is roughly twice this number,
+ * because the browser keeps the decoded pictures as well as the textures made from them.
+ */
+export function cacheBudgetMB(shot = false) {
+  const asked = Number(typeof location === 'undefined' ? NaN : searchParams().get('cache'));
+  if (asked >= 128) return Math.min(asked, 4096);
+  if (shot) return 500;
+  const mem = typeof navigator === 'undefined' ? undefined : navigator.deviceMemory;
+  if (mem === undefined) return 768;   // Safari and Firefox do not say
+  // Chrome reports 8 for every machine with 8 GB or more, so 8 has to stay safe for a real 8 GB laptop
+  return mem >= 16 ? 2048 : mem >= 8 ? 1024 : mem >= 4 ? 768 : 450;
+}
+/** What the shared cache holds right now, for the ?debug readout. */
+export const cacheInfo = () => ({
+  mb: Math.round(DEFAULT_LRU_CACHE.cachedBytes / 1048576), maxMb: Math.round(DEFAULT_LRU_CACHE.maxBytesSize / 1048576),
+  items: DEFAULT_LRU_CACHE.itemSet.size, maxItems: DEFAULT_LRU_CACHE.maxSize,
+});
 export function configureSharedQueues(shot) {
   if (queuesConfiguredFor === !!shot) return;
   queuesConfiguredFor = !!shot;
   DEFAULT_DOWNLOAD_QUEUE.priorityCallback = activeFirstPriority;
   DEFAULT_PARSE_QUEUE.priorityCallback = activeFirstPriority;
-  if (shot) {
-    DEFAULT_LRU_CACHE.minSize = 4000;
-    DEFAULT_LRU_CACHE.maxSize = 6000;
-    DEFAULT_LRU_CACHE.minBytesSize = 350 * 1024 * 1024;
-    DEFAULT_LRU_CACHE.maxBytesSize = 500 * 1024 * 1024;
-    DEFAULT_LRU_CACHE.unloadPercent = 0.05;
-    DEFAULT_DOWNLOAD_QUEUE.maxJobsPerOrigin = 25;
-    DEFAULT_PARSE_QUEUE.maxJobs = 5;
-    DEFAULT_NODE_QUEUE.maxJobs = 25;
-  } else {
-    // Keep cache generous enough that crisp leaf tiles (errorTarget ~7) are never refused,
-    // while still reclaiming behind-camera tiles across long tours
-    DEFAULT_LRU_CACHE.minSize = 4000;
-    DEFAULT_LRU_CACHE.maxSize = 6000;
-    DEFAULT_LRU_CACHE.minBytesSize = 320 * 1024 * 1024;
-    DEFAULT_LRU_CACHE.maxBytesSize = 450 * 1024 * 1024;
-    DEFAULT_LRU_CACHE.unloadPercent = 0.08;
-    DEFAULT_DOWNLOAD_QUEUE.maxJobsPerOrigin = 25;
-    DEFAULT_PARSE_QUEUE.maxJobs = 5;
-    DEFAULT_NODE_QUEUE.maxJobs = 25;
-  }
+  // Unloading starts above the lower marks (tiles no longer in use go first); the upper marks are where new tiles
+  // are refused. The tile count scales with the bytes so that it is never the count that refuses a tile first.
+  const mb = cacheBudgetMB(shot), scale = Math.max(1, mb / 450);
+  DEFAULT_LRU_CACHE.minSize = Math.round(4000 * scale);
+  DEFAULT_LRU_CACHE.maxSize = Math.round(6000 * scale);
+  DEFAULT_LRU_CACHE.minBytesSize = Math.round(mb * 0.72) * 1024 * 1024;
+  DEFAULT_LRU_CACHE.maxBytesSize = mb * 1024 * 1024;
+  DEFAULT_LRU_CACHE.unloadPercent = shot ? 0.05 : 0.08;
+  DEFAULT_DOWNLOAD_QUEUE.maxJobsPerOrigin = 25;
+  DEFAULT_PARSE_QUEUE.maxJobs = 5;
+  DEFAULT_NODE_QUEUE.maxJobs = 25;
 }
 
 // ---------------------------------------------------------------- the API key
@@ -105,7 +117,8 @@ function sessionFrom(node) {
   return null;
 }
 function ionPlugin(key) {
-  const ion = new CesiumIonAuthPlugin({ apiToken: key, assetId: String(ION_ASSET), autoRefreshToken: true });
+  // useRecommendedSettings: false for the same reason as in googlePlugin(): ion hands this asset on to the Google plugin
+  const ion = new CesiumIonAuthPlugin({ apiToken: key, assetId: String(ION_ASSET), autoRefreshToken: true, useRecommendedSettings: false });
   const auth = ion.auth;
   const origRefresh = key ? auth.refreshToken.bind(auth) : (options) => (auth._tokenRefreshPromise ??= fetch(auth.authURL, options)
     .then((res) => { if (!res.ok) throw new Error(`Cesium ion answered ${res.status}`); return res.json(); })
@@ -131,6 +144,7 @@ function unlitTintPlugin(tint, maxAniso) {
     name: 'UNLIT_TINT_PLUGIN',
     priority: -50,
     processTileModel(scene) {
+      const t0 = PERF ? performance.now() : 0;
       scene.traverse((o) => {
         if (!o.isMesh || !o.material || Array.isArray(o.material)) return;
         const old = o.material;
@@ -145,6 +159,7 @@ function unlitTintPlugin(tint, maxAniso) {
         o.material = m;
         old.dispose();
       });
+      if (PERF) perfAdd('tint', performance.now() - t0);
     },
   };
 }
@@ -167,7 +182,9 @@ function makeTiles(look, shot, renderer, liveLook = !shot) {
   return tiles;
 }
 function googlePlugin(key) {
-  const google = new GoogleCloudAuthPlugin({ apiToken: key, autoRefreshToken: true });
+  // useRecommendedSettings: false, or the plugin sets tiles.errorTarget = 20 when it is registered, which undid the
+  // finer value makeTiles() had just set: with a Google key the photos came out about five times coarser than meant
+  const google = new GoogleCloudAuthPlugin({ apiToken: key, autoRefreshToken: true, useRecommendedSettings: false });
   if (!key) {
     // the library always appends key=; with no key that empty value would be rejected, so send the requests bare
     const auth = google.auth; let rootRead = false;
