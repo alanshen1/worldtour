@@ -12,7 +12,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 renderer.autoClear = false; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 setRenderer(renderer);
-const MAX_RATIO = Math.min(window.devicePixelRatio || 1, 2); let ratio = SHOT ? 1 : MAX_RATIO;
+const MAX_RATIO = Math.min(window.devicePixelRatio || 1, 1.5);   // a Retina screen at 2x costs 4x the pixels; 1.5x looks nearly as sharp let ratio = SHOT ? 1 : MAX_RATIO;
 const cam = new THREE.PerspectiveCamera(60, 1, 1, 20000), pcam = cam.clone();
 const warmRT = new THREE.WebGLRenderTarget(32, 32);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(ratio); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
@@ -48,7 +48,14 @@ async function prepare(id) {
     tiles: built.tiles, settle: built.settle, clear: built.clear, measured: built.measured, lift: 0,
     aheadCam: built.prefetch ? new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far) : null,
   };
-  if (st.aheadCam) { pose(st, Math.min(1, 4 / st.duration), st.aheadCam.position, st.aheadCam.quaternion); built.prefetch(st.aheadCam); }
+  if (st.aheadCam) {
+    pose(st, Math.min(1, AHEAD_S / st.duration), st.aheadCam.position, st.aheadCam.quaternion); built.prefetch(st.aheadCam);
+    // Google's tiles refine level by level, a round trip each, so detail takes seconds to arrive: while the previous
+    // city is still flying, load the first stretch of this one's route too, from cameras pinned along it. Each pin is
+    // let go once the flight has passed it (in step()).
+    st.unprefetch = built.unprefetch;
+    st.pins = [0.06, 0.12, 0.18, 0.24, 0.3].map((u) => { const c = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far); pose(st, u, c.position, c.quaternion); built.prefetch(c); return { u, c }; });
+  }
   // warm-up: compile the shaders and draw once into a tiny off-screen target, so nothing stalls when the portal opens
   const wcam = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far);
   wcam.position.copy(P0); wcam.quaternion.setFromRotationMatrix(st.entry); wcam.updateMatrixWorld();
@@ -109,16 +116,17 @@ function step(dt) {
   pose(st, st.t, cam.position, q1);
   cam.quaternion.slerp(q1, 1 - Math.exp(-dt * 2.4));
   cam.position.y += liftAt(st, st.t, dt);
-  // in a real city a second camera rides about four seconds ahead, so the tiles there load before the flight arrives
-  if (st.aheadCam) { st.aheadCam.aspect = cam.aspect; st.aheadCam.updateProjectionMatrix(); pose(st, Math.min(1, st.t + 4 * pace / st.duration), st.aheadCam.position, st.aheadCam.quaternion); }
+  // in a real city a second camera rides a few seconds ahead, so the tiles there load before the flight arrives
+  if (st.aheadCam) { st.aheadCam.aspect = cam.aspect; st.aheadCam.updateProjectionMatrix(); pose(st, Math.min(1, st.t + AHEAD_S * pace / st.duration), st.aheadCam.position, st.aheadCam.quaternion); }
+  if (st.pins?.length) st.pins = st.pins.filter((p) => { if (p.u > st.t - 0.02) return true; st.unprefetch(p.c); return false; });
 }
-const ahead = new THREE.Vector3();
+const ahead = new THREE.Vector3(), AHEAD_S = 6;
 /** In a real city: how far to lift the camera above the authored path to keep it clear of real roofs. It fades out
  * before the portal, so the camera always passes through the ring. dt 0 means jump straight to the answer. */
 function liftAt(st, u, dt) {
   if (!st.clear) return 0;
   st.curve.getPointAt(Math.min(1, u + 60 / st.length), ahead);
-  const want = st.clear(cam.position, ahead, 28, dt ? 4 : 1) * (1 - THREE.MathUtils.smoothstep(u, 0.86, 0.95));
+  const want = st.clear(cam.position, ahead, 28, dt ? 15 : 1)   // raycasting real tiles is costly: a few times a second is enough * (1 - THREE.MathUtils.smoothstep(u, 0.86, 0.95));
   st.lift = dt ? st.lift + (want - st.lift) * (1 - Math.exp(-dt * 1.6)) : want;
   return st.lift;
 }

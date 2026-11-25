@@ -131,6 +131,7 @@ export async function buildTilesCity(city, renderer, o = {}) {
   };
   /** Keeps loading tiles for `camera` too, every frame, until the city is disposed. */
   const prefetch = (camera) => { extra.add(camera); tiles.setCamera(camera); };
+  const unprefetch = (camera) => { if (extra.delete(camera) && camera !== active) tiles.deleteCamera(camera); };
   world.onUpdate((t, dt, camera) => track(camera));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   /** Keeps loading for `camera` until nothing is left to download (true) or `ms` runs out (false). */
@@ -172,7 +173,7 @@ export async function buildTilesCity(city, renderer, o = {}) {
     return (lastLift = Math.max(0, need));
   }
   tiles.deleteCamera(probe); active = null;
-  return { world, path, focus, duration: city.duration ?? 48, tiles, settle, clear, prefetch, measured: { groundM: Math.round(groundM) } };
+  return { world, path, focus, duration: city.duration ?? 48, tiles, settle, clear, prefetch, unprefetch, measured: { groundM: Math.round(groundM) } };
 }
 
 /** The text Google asks to be shown with its tiles: the data providers for what is on screen. */
