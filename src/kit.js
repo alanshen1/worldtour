@@ -6,7 +6,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 export { THREE, mergeGeometries };
 
 let renderer = null, pmrem = null;
-export function setRenderer(r) { renderer = r; pmrem = new THREE.PMREMGenerator(r); }
+export function setRenderer(r) { renderer = r; pmrem?.dispose(); pmrem = null; }
+function getPmrem() { return pmrem ?? (renderer ? (pmrem = new THREE.PMREMGenerator(renderer)) : null); }
 
 // ---------------------------------------------------------------- numbers
 /** Seeded random source. r() in [0,1), r.range(a,b), r.int(a,b) inclusive, r.pick(array), r.chance(p). */
@@ -414,6 +415,7 @@ void main(){ vec3 d = normalize(vDir); float h = d.y;
  */
 export function createWorld(o = {}) {
   const scene = new THREE.Scene(), sky = o.sky ?? {}, sun = o.sun ?? {}, amb = o.ambient ?? {}, updaters = [];
+  const lit = o.lit ?? true;
   const sunDir = new THREE.Vector3(...(sun.dir ?? [0.4, 0.7, 0.3])).normalize();
   const sm = new THREE.ShaderMaterial({
     vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false, fog: false,
@@ -428,34 +430,47 @@ export function createWorld(o = {}) {
     const st = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, color: 0xffffff, fog: false, transparent: true, opacity: 0.85, depthWrite: false }));
     st.renderOrder = -999; st.frustumCulled = false; skyRoot.add(st);
   }
-  if (pmrem) {
-    const tmp = new THREE.Scene(); tmp.add(dome); const rt = pmrem.fromScene(tmp, 0.02, 1, 6000);
-    scene.environment = rt.texture; scene.environmentIntensity = o.env ?? 0.7; scene.userData.envRT = rt; skyRoot.add(dome);
+  if (lit && o.env !== 0) {
+    const gen = getPmrem();
+    if (gen) {
+      const tmp = new THREE.Scene(); tmp.add(dome); const rt = gen.fromScene(tmp, 0.02, 1, 6000);
+      scene.environment = rt.texture; scene.environmentIntensity = o.env ?? 0.7; scene.userData.envRT = rt; skyRoot.add(dome);
+    }
   }
   scene.add(skyRoot);
   const fog = o.fog ?? {}; scene.fog = new THREE.FogExp2(col(fog.color ?? sky.horizon ?? 0xbcd6ee), fog.density ?? 0.0006);
-  scene.add(new THREE.HemisphereLight(col(amb.sky ?? sky.top ?? 0x9fc4ff), col(amb.ground ?? 0x4a4338), amb.power ?? 0.9));
-  const light = new THREE.DirectionalLight(col(sun.color ?? 0xfff2d8), sun.power ?? 3);
-  light.castShadow = true; light.shadow.mapSize.set(2048, 2048); light.shadow.bias = -0.0004; light.shadow.normalBias = 0.6;
-  const sc = light.shadow.camera; sc.left = sc.bottom = -260; sc.right = sc.top = 260; sc.near = 10; sc.far = 1600;
-  scene.add(light, light.target);
+  let light = null;
+  if (lit) {
+    scene.add(new THREE.HemisphereLight(col(amb.sky ?? sky.top ?? 0x9fc4ff), col(amb.ground ?? 0x4a4338), amb.power ?? 0.9));
+    light = new THREE.DirectionalLight(col(sun.color ?? 0xfff2d8), sun.power ?? 3);
+    if (o.shadows !== false) {
+      light.castShadow = true; light.shadow.mapSize.set(2048, 2048); light.shadow.bias = -0.0004; light.shadow.normalBias = 0.6;
+      const sc = light.shadow.camera; sc.left = sc.bottom = -260; sc.right = sc.top = 260; sc.near = 10; sc.far = 1600;
+    }
+    scene.add(light, light.target);
+  }
   const world = {
-    scene, sun: light, sunDir, skyRoot, exposure: o.exposure ?? 1,
+    scene, sun: light, sunDir, skyRoot, exposure: o.exposure ?? 1, lit, fogDensity: fog.density ?? 0.0006,
     add(...objs) { for (const ob of objs.flat()) if (ob) scene.add(ob); return objs[0]; },
     onUpdate(fn) { updaters.push(fn); },
-    update(t, dt, cam) { for (const f of updaters) f(t, dt, cam); },
-    /** Engine calls this before drawing: keeps the sky and the shadow box centred on the camera. */
+    update(t, dt, cam, extra) { for (const f of updaters) f(t, dt, cam, extra); },
+    /** Engine calls this before drawing: keeps the sky and (for lit worlds) the shadow box centred on the camera. */
     follow(cam, fwd) {
       skyRoot.position.copy(cam.position);
-      light.target.position.copy(cam.position).addScaledVector(fwd, 120); light.target.position.y = Math.max(0, cam.position.y - 60);
-      light.position.copy(light.target.position).addScaledVector(sunDir, 800); light.target.updateMatrixWorld();
+      if (light) {
+        light.target.position.copy(cam.position).addScaledVector(fwd, 120); light.target.position.y = Math.max(0, cam.position.y - 60);
+        light.position.copy(light.target.position).addScaledVector(sunDir, 800); light.target.updateMatrixWorld();
+      }
     },
     dispose() {
       scene.traverse((ob) => {
         if (ob.geometry) ob.geometry.dispose();
         for (const m of [].concat(ob.material ?? [])) { for (const k in m) { const v = m[k]; if (v && v.isTexture && !v.userData.shared) v.dispose(); } m.dispose(); }
         if (ob.isInstancedMesh) ob.dispose();
+        if (ob.shadow) ob.shadow.dispose();
+        if (ob.isLight && ob.dispose) ob.dispose();
       });
+      scene.environment = null;
       scene.userData.envRT?.dispose();
     },
   };

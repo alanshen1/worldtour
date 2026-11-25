@@ -76,6 +76,8 @@ tools/shot.mjs        给某座城市沿途截图，用来检查效果
 1. 照着 `src/cities/new-york.js` 写一个 `src/cities/<id>.js`。
 2. 在 `src/cities/index.js` 的列表里加一行。
 3. 用 `node tools/shot.mjs <id> shots --overview` 沿途截图检查（需要 Playwright 和 Chromium；实景城市要能访问 Google 瓦片服务）。
+   - 这样拍到的是排航线用的素图（60° 广角、原始航线高度、没有后期）。加 `--live` 才是访客看到的画面（46° 镜头、抬高后的航线、屋顶净空、后期锐化），改动飞行观感后用它验收。
+   - 加 `--mode osm` 拍矢量精模（Cesium 地形 + OSM 建筑 + 地标模型，需要 Cesium ion token）；城市若回退成了 Google 瓦片，截图会报 `[wrong mode]` 并以非零退出。
 
 ## 许可
 
