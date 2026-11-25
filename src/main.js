@@ -12,7 +12,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 renderer.autoClear = false; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 setRenderer(renderer);
-const MAX_RATIO = Math.min(window.devicePixelRatio || 1, 1.5);   // a Retina screen at 2x costs 4x the pixels; 1.5x looks nearly as sharp let ratio = SHOT ? 1 : MAX_RATIO;
+// a Retina screen at 2x costs 4x the pixels; 1.5x looks nearly as sharp
+const MAX_RATIO = Math.min(window.devicePixelRatio || 1, 1.5); let ratio = SHOT ? 1 : MAX_RATIO;
 const cam = new THREE.PerspectiveCamera(60, 1, 1, 20000), pcam = cam.clone();
 const warmRT = new THREE.WebGLRenderTarget(32, 32);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(ratio); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
@@ -54,7 +55,7 @@ async function prepare(id) {
     // city is still flying, load the first stretch of this one's route too, from cameras pinned along it. Each pin is
     // let go once the flight has passed it (in step()).
     st.unprefetch = built.unprefetch;
-    st.pins = [0.06, 0.12, 0.18, 0.24, 0.3].map((u) => { const c = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far); pose(st, u, c.position, c.quaternion); built.prefetch(c); return { u, c }; });
+    st.pins = [0.08, 0.16, 0.24].map((u) => { const c = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far); pose(st, u, c.position, c.quaternion); built.prefetch(c); return { u, c }; });
   }
   // warm-up: compile the shaders and draw once into a tiny off-screen target, so nothing stalls when the portal opens
   const wcam = new THREE.PerspectiveCamera(60, cam.aspect, cam.near, cam.far);
