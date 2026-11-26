@@ -87,6 +87,33 @@ export function spreadJobStarts(queue, name = 'parseStart') {
     if (queue.items.length > 0 && queue.currJobs < max) queue.scheduleJobRun();   // the rest: next frame
   };
 }
+/**
+ * A gate for work that sits behind an `await` in someone else's code: `await gate()` lets the waiting pieces through
+ * one after another, inside animation frames, until `budgetMs` of a frame has gone; the rest wait for the next frame.
+ * At least one piece passes per frame. The piece itself runs in the microtasks that follow its release, so the clock
+ * is read a few microtasks later, when that piece has finished.
+ * name: what the ?debug readout calls the time spent on the pieces of one frame.
+ */
+export function frameGate(budgetMs, name) {
+  const waiting = []; let scheduled = false;
+  const pump = () => {
+    const t0 = performance.now(); let passed = 0;
+    const next = () => {
+      const spent = performance.now() - t0;
+      if (!waiting.length || spent >= budgetMs) {
+        if (PERF && passed) perfAdd('in:' + name, spent);
+        scheduled = waiting.length > 0;
+        if (scheduled) requestAnimationFrame(pump);
+        return;
+      }
+      passed++; waiting.shift()();
+      let hops = 8; const hop = () => { if (--hops > 0) queueMicrotask(hop); else next(); };
+      queueMicrotask(hop);
+    };
+    next();
+  };
+  return () => new Promise((ok) => { waiting.push(ok); if (!scheduled) { scheduled = true; requestAnimationFrame(pump); } });
+}
 export function configureSharedQueues(shot) {
   if (queuesConfiguredFor === !!shot) return;
   queuesConfiguredFor = !!shot;

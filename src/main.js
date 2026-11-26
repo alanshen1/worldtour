@@ -27,16 +27,19 @@ setRenderer(renderer);
 const MAX_RATIO = SHOT ? 1 : Math.min(DPR, 2); let ratio = MAX_RATIO;
 const cam = new THREE.PerspectiveCamera(FOV, 1, 1, 20000), pcam = cam.clone();
 const aheadCam = new THREE.PerspectiveCamera(FOV, 1, 1, 2600);
-const warmRT = new THREE.WebGLRenderTarget(32, 32);
 
 // Lightweight 1-pass post-processing: AMD FidelityFX CAS adaptive sharpening + subtle haze-cutting clarity & vibrance
 const USE_POST = LIVE_LOOK && renderer.capabilities.isWebGL2;
+const POST_SAMPLES = DPR < 1.5 ? 4 : 0;
 const postRT = USE_POST ? new THREE.WebGLRenderTarget(2, 2, {
   type: THREE.HalfFloatType,
   minFilter: THREE.LinearFilter,
   magFilter: THREE.LinearFilter,
-  samples: DPR < 1.5 ? 4 : 0,
+  samples: POST_SAMPLES,
 }) : null;
+// A newly built city is drawn here first, out of sight (see prepare). Same pixel format and sample count as postRT.
+const warmRT = new THREE.WebGLRenderTarget(32, 32, USE_POST ? { type: THREE.HalfFloatType, samples: POST_SAMPLES } : {});
+const emptyScene = new THREE.Scene();
 const postUniforms = {
   tDiffuse: { value: postRT?.texture ?? null },
   uTexel: { value: new THREE.Vector2(1, 1) },
@@ -150,11 +153,11 @@ function makePortal() {
 }
 
 /**
- * Draws a newly built city into a tiny off-screen target, a few meshes per animation frame, through the same clipping
- * plane the portal view uses. That compiles the shader variants the portal needs and uploads geometry and textures ahead
- * of time, so neither the flight nor the opening of the portal has one long frame.
- * (compileAsync alone cannot do this: three's compile() takes its clipping-plane count from the last frame drawn, not
- * from renderer.clippingPlanes, and it uploads no geometry.)
+ * Draws a newly built city into a small off-screen target (warmRT), a few meshes per animation frame, both ways it will
+ * be drawn: through the portal's clipping plane, and directly. The shaders themselves are compiled before this, in the
+ * background (compileVariant); what is left for the first real draw of a mesh is uploading its geometry and textures
+ * and whatever the graphics driver still prepares per shader and target, and this does both ahead of time, so neither
+ * the opening of the portal nor the crossing has one long frame.
  * Nothing else may draw or update this city while this runs: prepare() calls it before the city is handed over.
  */
 async function warmDrawGradually(st, wcam, signal, perFrame = 8) {
@@ -167,10 +170,12 @@ async function warmDrawGradually(st, wcam, signal, perFrame = 8) {
       if (signal?.aborted) return;
       const end = Math.min(i + perFrame, items.length);
       for (let j = i; j < end; j++) items[j].visible = true;
-      renderer.clippingPlanes = [st.clip];
       const t0 = PERF ? performance.now() : 0;
-      try { renderer.setRenderTarget(warmRT); renderer.render(scene, wcam); }
-      finally { renderer.setRenderTarget(null); renderer.clippingPlanes = []; }
+      try {
+        renderer.setRenderTarget(warmRT);
+        renderer.clippingPlanes = [st.clip]; renderer.render(scene, wcam);   // as seen through the portal
+        renderer.clippingPlanes = []; renderer.render(scene, wcam);          // as flown, after the crossing
+      } finally { renderer.setRenderTarget(null); renderer.clippingPlanes = []; }
       if (PERF) perfAdd('warm', performance.now() - t0);
       for (let j = i; j < end; j++) items[j].visible = false;
       await new Promise((r) => requestAnimationFrame(r));
@@ -178,6 +183,38 @@ async function warmDrawGradually(st, wcam, signal, perFrame = 8) {
   } finally {
     for (const o of items) o.visible = true;
   }
+}
+
+/**
+ * Compiles a city's shaders in the background (where the browser can), for one of the two ways it is drawn:
+ * clipped = seen through the portal (one clipping plane), otherwise flown directly (none).
+ * three's compile() takes the clipping-plane count from the last render() call, whatever that drew, so an empty scene
+ * is rendered first to set the count, and once more afterwards to put it back to none.
+ */
+async function compileVariant(st, wcam, clipped) {
+  const scene = st.world.scene, prevRT = renderer.getRenderTarget(); let what = scene, job;
+  if (clipped) {
+    // The pass before this one (not clipped) gave every material its program. A real city has a material per tile and
+    // only a handful of programs, so the clipped variants are asked for through one mesh per program instead of
+    // through every material again.
+    const byProgram = new Map();
+    scene.traverse((o) => {
+      if (!(o.isMesh || o.isPoints || o.isLine)) return;
+      for (const m of [].concat(o.material ?? [])) { const p = renderer.properties.get(m).currentProgram; if (p && !byProgram.has(p)) byProgram.set(p, o); }
+    });
+    const few = [...new Set(byProgram.values())];
+    what = { traverse: (fn) => few.forEach(fn), traverseVisible() {} };   // all that compile() asks of its first argument
+  }
+  const setPlanes = (planes) => { renderer.clippingPlanes = planes; renderer.setRenderTarget(warmRT); renderer.render(emptyScene, wcam); };
+  try {
+    setPlanes(clipped ? [st.clip] : []);
+    if (postRT) renderer.setRenderTarget(postRT);
+    job = renderer.compileAsync(what, wcam, scene);
+  } finally {
+    if (clipped) setPlanes([]);
+    renderer.clippingPlanes = []; renderer.setRenderTarget(prevRT);
+  }
+  await job;
 }
 
 const MODE_STORE = 'worldtour.mode';
@@ -278,10 +315,8 @@ async function prepare(id, signal, { urgent = false, mode = renderMode, at = 0 }
   // three builds the variant for whichever target is bound at the moment compile() is called, and a city is drawn into
   // postRT, not onto the screen: bound to the screen it would compile shaders the flight never uses.
   try {
-    const prevRT = renderer.getRenderTarget(); let job;
-    if (postRT) renderer.setRenderTarget(postRT);
-    try { job = renderer.compileAsync(st.world.scene, wcam); } finally { renderer.setRenderTarget(prevRT); }
-    await job;
+    await compileVariant(st, wcam, false);
+    if (cur && !SHOT && !signal?.aborted) await compileVariant(st, wcam, true);
   } catch (e) { /* older browsers: compile on first draw */ }
 
   if (signal?.aborted) { dispose(st); const e = new Error('aborted'); e.name = 'AbortError'; throw e; }
@@ -296,10 +331,29 @@ async function prepare(id, signal, { urgent = false, mode = renderMode, at = 0 }
 }
 
 function dispose(st) { if (!st) return; st.tiles?.dispose(); st.world.dispose(); }
+/**
+ * Takes the city just left apart over many frames. All at once it held the page for 90 to 190 ms right after every
+ * crossing (some thousand tiles, each with geometry and textures to free). Its tiles are released a few at a time,
+ * the way the tile cache evicts them during a flight, and what is left is disposed of at the end.
+ */
+const DISPOSE_BUDGET_MS = 1.5;
 function deferDispose(st) {
   if (!st) return;
-  if (typeof requestIdleCallback === 'function') requestIdleCallback(() => dispose(st), { timeout: 1500 });
-  else setTimeout(() => dispose(st), 400);
+  const pending = [];
+  for (const t of st.tiles ? (st.tiles.terrain ? [st.tiles.terrain, st.tiles.osm] : [st.tiles]) : []) {
+    const cache = t.lruCache;
+    if (cache && typeof t.traverse === 'function') t.traverse((tile) => { if (cache.has(tile)) pending.push(cache, tile); return false; }, null, false);
+  }
+  const slice = () => {
+    const t0 = performance.now();
+    try {
+      while (pending.length && performance.now() - t0 < DISPOSE_BUDGET_MS) { const tile = pending.pop(), cache = pending.pop(); cache.remove(tile); }
+    } catch (e) { pending.length = 0; console.warn('gradual dispose failed, disposing the rest at once:', e); }
+    if (PERF) perfAdd('in:dispose', performance.now() - t0);
+    if (pending.length) return requestAnimationFrame(slice);
+    const t1 = performance.now(); dispose(st); if (PERF) perfAdd('in:dispose', performance.now() - t1);
+  };
+  requestAnimationFrame(slice);
 }
 
 // ---------------------------------------------------------------- the flight

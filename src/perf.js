@@ -91,7 +91,7 @@ export function format(s) {
     `fps ${s.fps}   avg ${s.avgMs} ms   worst ${s.worstMs} ms   stutters(>${s.longLimitMs ?? LONG_MS}ms) ${s.longFrames}/${s.frames}`,
     `${p('tiles', 'tiles.update')}   ${p('roof')}   ${p('draw')}   ${p('warm')}   other ${s.unaccountedPerFrameMs}/f`,
     `frame callbacks (ms): ${m('raf:loop', 'engine')}   ${m('raf:other', 'libraries')}   ${b('in:parseStart', 'tile parse starts')}`,
-    `${b('osmTile', 'osm tile build')}   ${b('tint', 'photo tile build')}   ${b('nextRefine', 'next-city refine')}`,
+    `${b('osmTile', 'osm tile build')}   ${b('tint', 'photo tile build')}   ${b('nextRefine', 'next-city refine')}   ${b('in:groundSplit', 'ground tile splits')}   ${b('in:dispose', 'old-city dispose')}`,
     `calls ${s.calls ?? '?'}   tris ${s.tris ?? '?'}   geometries ${s.geometries ?? '?'}   textures ${s.textures ?? '?'}   programs ${s.programs ?? '?'}`,
     `tiles visible ${t.visible ?? '?'} active ${t.active ?? '?'} | queued ${t.queued ?? 0} downloading ${t.downloading ?? 0} parsing ${t.parsing ?? 0} | REFUSED ${t.refused ?? 0} failed ${t.failed ?? 0}`,
     `cache ${c.mb ?? '?'}/${c.maxMb ?? '?'} MB   items ${c.items ?? '?'}/${c.maxItems ?? '?'}   ratio ${s.ratio ?? '?'}   ${s.size ?? ''}   errorTarget ${s.errorTarget ?? '?'}`,

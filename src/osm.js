@@ -10,7 +10,7 @@ import {
   ImageOverlayPlugin, CesiumIonOverlay,
 } from '3d-tiles-renderer/plugins';
 import { createWorld } from './kit.js';
-import { apiKey, configureSharedQueues, dracoLoader } from './tiles.js';
+import { apiKey, configureSharedQueues, dracoLoader, frameGate } from './tiles.js';
 import { PERF, perfAdd } from './perf.js';
 import { getLandmarkExclusions, placeHeroLandmarks } from './landmarks.js';
 
@@ -46,6 +46,24 @@ export function capImageryLevels(overlay, maxLevel) {
     return result;
   });
   return overlay;
+}
+/**
+ * Spreads the splitting of terrain tiles over frames. Where the aerial photo goes deeper than the terrain, the overlay
+ * plugin cuts a terrain tile's mesh into four "virtual" children so each can carry a sharper photo: that is what makes
+ * the ground sharp, and it is done on the main thread, up to 11 ms for one tile. The plugin does it the moment a
+ * tile's photo is in, so the tiles whose photos arrived together were all cut in one frame: frames of 20 to 35 ms
+ * (measured with ?debug probes: the long gaps between animation frames were this call and nothing else).
+ * The cut follows an `await` inside the plugin; here that await also passes a gate that lets about SPLIT_BUDGET_MS of
+ * it through per frame, at least one tile. Downloads are not held back and the order is unchanged. Returns the plugin.
+ */
+const SPLIT_BUDGET_MS = 2;
+const splitGate = frameGate(SPLIT_BUDGET_MS, 'groundSplit');   // one gate for every city: the budget is per frame
+export function paceTileSplitting(plugin, gate = splitGate) {
+  const init = plugin._initTileSceneOverlayInfo;
+  if (typeof init !== 'function') return plugin;   // another version of the library: leave it as it is
+  // the plugin's _processTileModel awaits this, then cuts the tile (expandVirtualChildren) and sets up its layers
+  plugin._initTileSceneOverlayInfo = function (...args) { return Promise.resolve(init.apply(this, args)).then(gate); };
+  return plugin;
 }
 
 /** Infers time-of-day mood (0 = crisp bright day, 0.35 = late afternoon, 1.0 = dusk/golden evening) from city.look. */
@@ -509,7 +527,9 @@ export async function buildOsmCity(city, renderer, o = {}) {
   // tried for a sharper ground, but it asks for four times the photo tiles (the ground loaded slowly) and reached the
   // missing levels a level sooner.
   const imagery = capImageryLevels(new CesiumIonOverlay({ apiToken: key, assetId: ION_IMAGERY_ASSET, autoRefreshToken: true }), imageryMaxLevel());
-  terrainTiles.registerPlugin(new ImageOverlayPlugin({ overlays: [imagery] }));
+  const overlayPlugin = new ImageOverlayPlugin({ overlays: [imagery] });
+  if (!o.shot) paceTileSplitting(overlayPlugin);   // still frames wait for everything anyway: no need to pace them
+  terrainTiles.registerPlugin(overlayPlugin);
   terrainTiles.registerPlugin(new ReorientationPlugin({ lat: city.lat * D2R, lon: city.lon * D2R, height: 0 }));
   terrainTiles.registerPlugin(terrainShadowPlugin());
   world.add(terrainTiles.group);
