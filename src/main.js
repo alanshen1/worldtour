@@ -218,7 +218,7 @@ async function compileVariant(st, wcam, clipped) {
 }
 
 const MODE_STORE = 'worldtour.mode';
-let renderMode = 'osm', switchingMode = false;
+let renderMode = 'google', switchingMode = false;
 function resolveInitialMode() {
   const fromUrl = Q.get('mode');
   if (fromUrl === 'google') return 'google';
@@ -229,7 +229,7 @@ function resolveInitialMode() {
     const saved = localStorage.getItem(MODE_STORE);
     if (saved === 'google' || saved === 'osm') return saved;
   } catch (e) { /* ignore private storage errors */ }
-  return 'osm';
+  return 'google';   // the default: the real cities as photographed. Vector mode is a choice (M key, or ?mode=osm)
 }
 /**
  * The mode on screen. The city being flown decides, not renderMode (the mode for cities still to be built): a vector
