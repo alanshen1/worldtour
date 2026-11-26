@@ -169,105 +169,237 @@ function cloneFacadeMaterial(base) {
 }
 
 /**
+ * A coarse map of how high the buildings reach: the tallest roof over each `cell` x `cell` metre square of the city,
+ * filled in as building tiles arrive. The roof-clearance check asks this map instead of casting a ray at the building
+ * meshes: a ray is tested against every triangle of every large tile it crosses (tens of thousands in a dense city,
+ * several times a second), and that showed as a steady stutter. Looking a square up costs nothing.
+ * A building is entered by the rectangle around its footprint, so the map errs on the side of flying a little higher.
+ */
+export function createRoofGrid(cell = 12) {
+  const tops = new Map(), OFF = 32768, MAX_CELLS = 20000;
+  const key = (ix, iz) => (ix + OFF) * 65536 + (iz + OFF);
+  return {
+    cell,
+    /** Something reaches up to height `top` over the rectangle minX..maxX, minZ..maxZ (city metres). */
+    add(minX, maxX, minZ, maxZ, top) {
+      const x0 = Math.floor(minX / cell), x1 = Math.floor(maxX / cell), z0 = Math.floor(minZ / cell), z1 = Math.floor(maxZ / cell);
+      if (!(x1 >= x0 && z1 >= z0) || (x1 - x0 + 1) * (z1 - z0 + 1) > MAX_CELLS) return;   // NaN, or not a building
+      for (let ix = x0; ix <= x1; ix++) {
+        for (let iz = z0; iz <= z1; iz++) {
+          const k = key(ix, iz), old = tops.get(k);
+          if (old === undefined || top > old) tops.set(k, top);
+        }
+      }
+    },
+    /** The tallest roof recorded over the square that holds (x, z), or null where no building is known. */
+    topAt(x, z) { const v = tops.get(key(Math.floor(x / cell), Math.floor(z / cell))); return v === undefined ? null : v; },
+    get size() { return tops.size; },
+  };
+}
+
+// scratch arrays for osmBuildingsPlugin, grown as needed and reused from tile to tile (no garbage per tile)
+let sX = new Float32Array(0), sY = new Float32Array(0), sZ = new Float32Array(0);
+let bMinY = new Float32Array(0), bMaxY = new Float32Array(0), bMinX = new Float32Array(0), bMaxX = new Float32Array(0);
+let bMinZ = new Float32Array(0), bMaxZ = new Float32Array(0), bSumX = new Float64Array(0), bSumZ = new Float64Array(0);
+let bN = new Uint32Array(0), bOut = new Uint8Array(0), bSeed = new Float32Array(0);
+function growScratch(vertices, batches) {
+  if (sX.length < vertices) { const n = Math.ceil(vertices * 1.5); sX = new Float32Array(n); sY = new Float32Array(n); sZ = new Float32Array(n); }
+  if (bN.length < batches) {
+    const n = Math.ceil(batches * 1.5);
+    bMinY = new Float32Array(n); bMaxY = new Float32Array(n); bMinX = new Float32Array(n); bMaxX = new Float32Array(n);
+    bMinZ = new Float32Array(n); bMaxZ = new Float32Array(n); bSumX = new Float64Array(n); bSumZ = new Float64Array(n);
+    bN = new Uint32Array(n); bOut = new Uint8Array(n); bSeed = new Float32Array(n);
+  }
+}
+const hashInt = (n) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s); };
+
+// The passes over a tile, each over a range [i0, i1) so that the caller can hand the thread back between ranges.
+// They are plain functions on plain arrays, kept out of the async function that drives them: written inside it, the
+// JavaScript engine optimised these loops only now and then, and a tile took up to four times as long.
+// v: what the passes need to know about one mesh (see meshView below).
+
+/** Vertices i0..i1 into city metres (sX, sY, sZ). Returns the largest batch id seen, or -2 if an id is unusable. */
+function transformRange(v, i0, i1, maxId) {
+  const { pos, raw, stride, off, e, batch, bRaw, bStride } = v;
+  for (let i = i0; i < i1; i++) {
+    let x, y, z;
+    if (raw) { const j = i * stride + off; x = raw[j]; y = raw[j + 1]; z = raw[j + 2]; }
+    else { x = pos.getX(i); y = pos.getY(i); z = pos.getZ(i); }
+    sX[i] = e[0] * x + e[4] * y + e[8] * z + e[12];
+    sY[i] = e[1] * x + e[5] * y + e[9] * z + e[13];
+    sZ[i] = e[2] * x + e[6] * y + e[10] * z + e[14];
+    if (maxId > -2 && batch) {
+      const id = bRaw ? bRaw[i * bStride] : batch.getX(i);
+      if (id >= 0 && id === Math.floor(id)) { if (id > maxId) maxId = id; } else maxId = -2;
+    }
+  }
+  return maxId;
+}
+/** Vertices i0..i1 into the statistics of their buildings: extent, height range, footprint centre. */
+function statsRange(v, i0, i1) {
+  const { batch, bRaw, bStride } = v;
+  for (let i = i0; i < i1; i++) {
+    const b = bRaw ? bRaw[i * bStride] : batch.getX(i), x = sX[i], y = sY[i], z = sZ[i];
+    if (y < bMinY[b]) bMinY[b] = y;
+    if (y > bMaxY[b]) bMaxY[b] = y;
+    if (x < bMinX[b]) bMinX[b] = x;
+    if (x > bMaxX[b]) bMaxX[b] = x;
+    if (z < bMinZ[b]) bMinZ[b] = z;
+    if (z > bMaxZ[b]) bMaxZ[b] = z;
+    bSumX[b] += x; bSumZ[b] += z; bN[b]++;
+  }
+}
+/** Buildings b0..b1: removed under a hero landmark, or given their seed and entered into the roof map. True if any was removed. */
+function buildingsRange(b0, b1, exclusions, roofs) {
+  let anyOut = false;
+  for (let b = b0; b < b1; b++) {
+    if (!bN[b]) continue;
+    const cx = bSumX[b] / bN[b], cz = bSumZ[b] / bN[b];
+    // Check hero landmark exclusions per whole building footprint (zero half-cut shards!)
+    for (let k = 0; k < exclusions.length; k++) {
+      const ex = exclusions[k], dx = cx - ex.x, dz = cz - ex.z;
+      if (dx * dx + dz * dz < ex.r * ex.r) { bOut[b] = 1; anyOut = true; break; }
+    }
+    if (bOut[b]) continue;
+    bSeed[b] = hashInt(b + Math.round(cx * 0.2) * 31 + Math.round(cz * 0.2) * 17);
+    if (roofs) roofs.add(bMinX[b], bMaxX[b], bMinZ[b], bMaxZ[b], bMaxY[b]);
+  }
+  return anyOut;
+}
+/** Vertices i0..i1: their building's seed, height and their own height above its base, into buildInfo. */
+function writeRange(v, i0, i1, buildInfo) {
+  const { pos, batch, bRaw, bStride } = v;
+  for (let i = i0; i < i1; i++) {
+    const b = bRaw ? bRaw[i * bStride] : batch.getX(i), j = i * 3;
+    if (bOut[b]) {
+      // Collapse excluded building vertices to a single degenerate point underground
+      pos.setXYZ(i, 0, -99999, 0);
+      buildInfo[j] = 0; buildInfo[j + 1] = 10; buildInfo[j + 2] = 0;
+    } else {
+      buildInfo[j] = bSeed[b];
+      buildInfo[j + 1] = Math.max(6, bMaxY[b] - bMinY[b]);
+      buildInfo[j + 2] = Math.max(0, sY[i] - bMinY[b]);
+    }
+  }
+}
+/** A tile without usable batch ids, vertices i0..i1: one height for the whole mesh, a seed by place. */
+function fallbackRange(i0, i1, buildInfo, minY, h, roofs) {
+  for (let i = i0; i < i1; i++) {
+    const j = i * 3;
+    buildInfo[j] = hashInt(Math.floor(sX[i] / 35) * 37 + Math.floor(sZ[i] / 35) * 91);
+    buildInfo[j + 1] = h; buildInfo[j + 2] = Math.max(0, sY[i] - minY);
+    if (roofs) roofs.add(sX[i], sX[i], sZ[i], sZ[i], sY[i]);   // no footprints to go by: every vertex marks its own square
+  }
+}
+/** How to read one mesh: its position attribute straight from the array where that is possible, and its batch ids. */
+function meshView(geo, e) {
+  const pos = geo.attributes.position, batch = geo.attributes._batchid || geo.attributes._BATCHID || null;
+  const inter = pos.isInterleavedBufferAttribute === true;
+  return {
+    pos, e, batch,
+    raw: pos.normalized ? null : (inter ? pos.data.array : pos.array),
+    stride: inter ? pos.data.stride : pos.itemSize, off: inter ? pos.offset : 0,
+    bRaw: batch && !batch.normalized && batch.isInterleavedBufferAttribute !== true ? batch.array : null,
+    bStride: batch ? batch.itemSize : 1,
+  };
+}
+
+/** Hands the main thread back to the browser (so that a frame can be drawn) and resumes straight after. */
+const breatheWaiting = [], breatheChannel = typeof MessageChannel === 'function' ? new MessageChannel() : null;
+if (breatheChannel) breatheChannel.port1.onmessage = () => { const go = breatheWaiting.shift(); if (go) go(); };
+function breathe() {
+  if (globalThis.scheduler?.yield) return globalThis.scheduler.yield();
+  return new Promise((go) => { if (breatheChannel) { breatheWaiting.push(go); breatheChannel.port2.postMessage(0); } else setTimeout(go, 0); });
+}
+
+/**
  * Plugin that runs during parseTile (BEFORE engineData.materials is snapshotted):
  * 1. Computes per-building hash, real height, and base elevation from `_batchid` (or mesh fallback).
  * 2. Cleanly removes entire OSM buildings whose footprint falls inside a hero landmark's exclusion radius.
  * 3. Applies per-tile clones of the PBR architectural facade material (sharing one compiled WebGLProgram
  *    via customProgramCacheKey, while allowing TilesRenderer to safely dispose individual evicted tiles).
+ * 4. Enters every building it keeps into `roofs` (createRoofGrid), for the roof-clearance check.
+ *
+ * This runs on the main thread for every building tile that arrives, and a large tile takes 10 to 20 ms: three frames
+ * of a 144 Hz screen if done in one go. So the work is done in slices of o.sliceMs with the thread handed back between
+ * them (and once before starting, so it does not pile onto the library's own parsing of the tile in the same task).
+ * The library waits for the promise before it uses the tile. Tiles are taken one at a time: the slices of two tiles
+ * never interleave, which also keeps the shared scratch arrays safe.
+ * o.onSlice(ms): called after every slice with the time it took (for the test).
  */
-function osmBuildingsPlugin(baseMat, exclusions, osmTiles) {
-  const wp = new THREE.Vector3();
-  const hashInt = (n) => {
-    const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
-    return s - Math.floor(s);
-  };
+export function osmBuildingsPlugin(baseMat, exclusions, osmTiles, roofs = null, o = {}) {
+  // 2 ms slices: a 144 Hz frame is 6.9 ms and the engine's own work takes about half of it
+  const sliceMs = o.sliceMs ?? 2, CHUNK = 2048;   // CHUNK: vertices between two looks at the clock
+  const toWorld = new THREE.Matrix4();
+  let sliceStart = 0;
+  const endSlice = () => { const ms = performance.now() - sliceStart; if (PERF) perfAdd('osmTile', ms); if (o.onSlice) o.onSlice(ms); };
+  const due = () => performance.now() - sliceStart >= sliceMs;
+  /** The slice has used up its time: let the browser draw, then start a new one. */
+  const pause = async () => { endSlice(); await breathe(); sliceStart = performance.now(); };
+
+  async function buildMesh(mesh) {
+    const geo = mesh.geometry;
+    if (!geo.attributes.position) return;
+    if (!geo.attributes.normal) { geo.computeVertexNormals(); if (due()) await pause(); }
+
+    // Compose mesh -> city ENU matrix so heights & exclusion radii are in exact local metres
+    toWorld.multiplyMatrices(osmTiles.group.matrixWorld, mesh.matrixWorld);
+    const v = meshView(geo, toWorld.elements), count = v.pos.count;
+    const buildInfo = new Float32Array(count * 3);
+    growScratch(count, 0);
+
+    let maxId = v.batch ? -1 : -2;
+    for (let i = 0; i < count; i += CHUNK) { maxId = transformRange(v, i, Math.min(count, i + CHUNK), maxId); if (due()) await pause(); }
+    // batch ids are small whole numbers (0 .. buildings-1); anything else is treated like a tile without ids
+    if (maxId > Math.max(65535, count)) maxId = -2;
+
+    if (maxId >= 0) {
+      const nb = maxId + 1;
+      growScratch(count, nb);
+      bMinY.fill(Infinity, 0, nb); bMaxY.fill(-Infinity, 0, nb); bMinX.fill(Infinity, 0, nb); bMaxX.fill(-Infinity, 0, nb);
+      bMinZ.fill(Infinity, 0, nb); bMaxZ.fill(-Infinity, 0, nb); bSumX.fill(0, 0, nb); bSumZ.fill(0, 0, nb); bN.fill(0, 0, nb); bOut.fill(0, 0, nb);
+      for (let i = 0; i < count; i += CHUNK) { statsRange(v, i, Math.min(count, i + CHUNK)); if (due()) await pause(); }
+      let anyOut = false;
+      for (let b = 0; b < nb; b += 256) { if (buildingsRange(b, Math.min(nb, b + 256), exclusions, roofs)) anyOut = true; if (due()) await pause(); }
+      for (let i = 0; i < count; i += CHUNK) { writeRange(v, i, Math.min(count, i + CHUNK), buildInfo); if (due()) await pause(); }
+      if (anyOut) v.pos.needsUpdate = true;
+    } else {
+      // Fallback if a tile has no (usable) _batchid attribute
+      let minY = Infinity, maxY = -Infinity;
+      for (let i = 0; i < count; i++) { const y = sY[i]; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      const h = Math.max(12, maxY - minY);
+      for (let i = 0; i < count; i += CHUNK) { fallbackRange(i, Math.min(count, i + CHUNK), buildInfo, minY, h, roofs); if (due()) await pause(); }
+    }
+
+    geo.setAttribute('aBuildInfo', new THREE.BufferAttribute(buildInfo, 3));
+    const old = mesh.material;
+    mesh.material = cloneFacadeMaterial(baseMat);
+    if (old) {
+      if (Array.isArray(old)) old.forEach((mm) => mm.dispose());
+      else old.dispose();
+    }
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  }
+  async function buildTile(scene) {
+    await breathe();
+    sliceStart = performance.now();
+    try {
+      osmTiles.group.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
+      const meshes = [];
+      scene.traverse((ob) => { if (ob.isMesh && ob.geometry) meshes.push(ob); });
+      for (const mesh of meshes) { await buildMesh(mesh); if (due()) await pause(); }
+    } finally { endSlice(); }
+  }
+  let chain = Promise.resolve();   // one tile at a time
   return {
     name: 'OSM_PBR_BUILDINGS_PLUGIN',
     priority: -50,
     processTileModel(scene) {
-      const t0 = PERF ? performance.now() : 0;
-      osmTiles.group.updateMatrixWorld(true);
-      scene.updateMatrixWorld(true);
-      scene.traverse((o) => {
-        if (!o.isMesh || !o.geometry) return;
-        const geo = o.geometry;
-        const pos = geo.attributes.position;
-        if (!pos) return;
-        if (!geo.attributes.normal) geo.computeVertexNormals();
-
-        // Compose mesh -> city ENU matrix so heights & exclusion radii are in exact local metres
-        const toWorld = new THREE.Matrix4().multiplyMatrices(osmTiles.group.matrixWorld, o.matrixWorld);
-        const batchAttr = geo.attributes._batchid || geo.attributes._BATCHID;
-        const count = pos.count;
-        const buildInfo = new Float32Array(count * 3);
-
-        if (batchAttr) {
-          // Group vertices by real OSM building batch ID
-          const stats = new Map();
-          for (let i = 0; i < count; i++) {
-            const bid = batchAttr.getX(i);
-            wp.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
-            let st = stats.get(bid);
-            if (!st) { st = { minY: wp.y, maxY: wp.y, sumX: 0, sumZ: 0, n: 0, excluded: false }; stats.set(bid, st); }
-            if (wp.y < st.minY) st.minY = wp.y;
-            if (wp.y > st.maxY) st.maxY = wp.y;
-            st.sumX += wp.x; st.sumZ += wp.z; st.n++;
-          }
-          // Check hero landmark exclusions per whole building footprint (zero half-cut shards!)
-          if (exclusions.length) {
-            for (const st of stats.values()) {
-              const cx = st.sumX / st.n, cz = st.sumZ / st.n;
-              for (let k = 0; k < exclusions.length; k++) {
-                const ex = exclusions[k], dx = cx - ex.x, dz = cz - ex.z;
-                if (dx * dx + dz * dz < ex.r * ex.r) { st.excluded = true; break; }
-              }
-            }
-          }
-          let anyExcluded = false;
-          for (let i = 0; i < count; i++) {
-            const bid = batchAttr.getX(i), st = stats.get(bid);
-            if (st.excluded) {
-              anyExcluded = true;
-              // Collapse excluded building vertices to a single degenerate point underground
-              pos.setXYZ(i, 0, -99999, 0);
-              buildInfo[i * 3] = 0; buildInfo[i * 3 + 1] = 10; buildInfo[i * 3 + 2] = 0;
-            } else {
-              wp.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
-              const h = Math.max(6, st.maxY - st.minY);
-              const seed = hashInt(bid + Math.round(st.sumX / st.n * 0.2) * 31 + Math.round(st.sumZ / st.n * 0.2) * 17);
-              buildInfo[i * 3] = seed;
-              buildInfo[i * 3 + 1] = h;
-              buildInfo[i * 3 + 2] = Math.max(0, wp.y - st.minY);
-            }
-          }
-          if (anyExcluded) pos.needsUpdate = true;
-        } else {
-          // Fallback if a tile has no _batchid attribute
-          let minY = Infinity, maxY = -Infinity;
-          for (let i = 0; i < count; i++) {
-            wp.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
-            if (wp.y < minY) minY = wp.y;
-            if (wp.y > maxY) maxY = wp.y;
-          }
-          const h = Math.max(12, maxY - minY);
-          for (let i = 0; i < count; i++) {
-            wp.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
-            const seed = hashInt(Math.floor(wp.x / 35) * 37 + Math.floor(wp.z / 35) * 91);
-            buildInfo[i * 3] = seed; buildInfo[i * 3 + 1] = h; buildInfo[i * 3 + 2] = Math.max(0, wp.y - minY);
-          }
-        }
-
-        geo.setAttribute('aBuildInfo', new THREE.BufferAttribute(buildInfo, 3));
-        const old = o.material;
-        o.material = cloneFacadeMaterial(baseMat);
-        if (old) {
-          if (Array.isArray(old)) old.forEach((mm) => mm.dispose());
-          else old.dispose();
-        }
-        o.castShadow = true;
-        o.receiveShadow = true;
-      });
-      if (PERF) perfAdd('osmTile', performance.now() - t0);
+      const job = chain.then(() => buildTile(scene));
+      chain = job.catch(() => {});   // a tile that fails is the library's to report; the next one still gets its turn
+      return job;
     },
   };
 }
@@ -375,7 +507,8 @@ export async function buildOsmCity(city, renderer, o = {}) {
   osmTiles.registerPlugin(makeIonPlugin(key, ION_OSM_ASSET));
   osmTiles.registerPlugin(new GLTFExtensionsPlugin({ dracoLoader: dracoLoader() }));
   osmTiles.registerPlugin(new ReorientationPlugin({ lat: city.lat * D2R, lon: city.lon * D2R, height: 0 }));
-  osmTiles.registerPlugin(osmBuildingsPlugin(facadeMaterial, exclusions, osmTiles));
+  const roofs = createRoofGrid();   // how high the buildings reach, filled by the plugin as their tiles arrive
+  osmTiles.registerPlugin(osmBuildingsPlugin(facadeMaterial, exclusions, osmTiles, roofs));
   world.add(osmTiles.group);
 
   // Unified facade object so main.js can listen to events, check stats/busy, set priorities, and dispose both tilesets cleanly
@@ -489,6 +622,20 @@ export async function buildOsmCity(city, renderer, o = {}) {
     ray.intersectObject(terrainTiles.group, true, hits);
     return hits.length ? hits[0].point.y : null;
   };
+  // The terrain height a landmark may stand on: only from a terrain tile that is fine enough.
+  // A ray meets every ACTIVE terrain tile, and where the camera is not looking (or while finer tiles are still on their
+  // way) the active tile is a coarse one, kilometres wide, whose surface near mountains can lie hundreds of metres off
+  // the valley floor: Taipei 101 hung in mid-air from standing on one. A tile's size tells its level: a mesh whose
+  // bounding sphere is within FINE_TILE_RADIUS is level 13 or finer, good to a few metres.
+  const FINE_TILE_RADIUS = 2000;
+  const hitTerrainFineY = (x, z) => {
+    hits.length = 0; from.set(x, 6000, z); ray.set(from, down);
+    ray.intersectObject(terrainTiles.group, true, hits);
+    if (!hits.length) return null;
+    const mesh = hits[0].object, sphere = mesh?.geometry?.boundingSphere;
+    if (!sphere) return null;
+    return sphere.radius * mesh.matrixWorld.getMaxScaleOnAxis() <= FINE_TILE_RADIUS ? hits[0].point.y : null;
+  };
   // Hero landmarks stand where their OSM footprints were removed, so the roof-clearance ray has to see them as well:
   // without this the camera would fly straight through a tower that the OSM buildings no longer contain.
   // heroBounds is filled once the landmarks are placed: [{ obj, r }] with r the landmark's horizontal reach in metres.
@@ -504,11 +651,11 @@ export async function buildOsmCity(city, renderer, o = {}) {
     }
     return top;
   };
+  // the highest thing over (x, z): a building (from the roof map, not a ray: see createRoofGrid), the terrain, a landmark
   const hitAnyY = (x, z) => {
-    hits.length = 0; from.set(x, 6000, z); ray.set(from, down);
-    ray.intersectObject(osmTiles.group, true, hits);
-    let top = hits.length ? hits[0].point.y : null;
-    for (const y of [hitTerrainY(x, z), hitHeroY(x, z)]) if (y !== null && (top === null || y > top)) top = y;
+    let top = roofs.topAt(x, z);
+    const t = hitTerrainY(x, z); if (t !== null && (top === null || t > top)) top = t;
+    const h = hitHeroY(x, z); if (h !== null && (top === null || h > top)) top = h;
     return top;
   };
 
@@ -522,7 +669,7 @@ export async function buildOsmCity(city, renderer, o = {}) {
   // Place high-detail Hero Landmarks (external .glb override or built-in PBR model)
   const placedLandmarks = await placeHeroLandmarks(cityId, world, {
     toLocal: (lat, lon, alt) => toLocal(lat, lon, alt),
-    groundAt: hitTerrainY,
+    groundAt: hitTerrainFineY,   // null where the terrain is not fine yet: the landmark then waits at groundM (below)
     groundM,
     night,
     signal,
@@ -537,11 +684,10 @@ export async function buildOsmCity(city, renderer, o = {}) {
     heroBounds.push({ obj, r });
   }
 
-  // Distant landmarks (e.g. Taipei 101 or Tokyo Tower, 2-5 km from origin) may not have terrain tiles loaded yet
-  // during initial probe; gently snap them to exact real terrain elevation once their local terrain tile arrives.
-  // The terrain first seen under a far landmark is a coarse level that can be several metres off, so the landmark
-  // keeps following the terrain (twice a second; on every frame of a still shot) until the camera has come within
-  // SNAP_NEAR metres of it, where the terrain below is at full detail. Only then does it stay where it stands.
+  // A landmark away from the origin has no fine terrain under it yet when the city is built. Until it does it stands
+  // at the height of the origin's ground (groundM), which in a city is close. Then it follows the fine terrain below
+  // it (twice a second; on every frame of a still shot) until the camera has come within SNAP_NEAR metres, where the
+  // terrain is at full detail, and only then stays where it stands. Coarse terrain is never trusted (hitTerrainFineY).
   const pendingSnap = placedLandmarks.filter((obj) => !obj.userData?.grounded);
   if (pendingSnap.length) {
     const SNAP_NEAR = 500, every = o.shot ? 0 : 0.5;
@@ -550,8 +696,8 @@ export async function buildOsmCity(city, renderer, o = {}) {
       if (!pendingSnap.length || (since += dt) < every) return;
       since = 0;
       for (let i = pendingSnap.length - 1; i >= 0; i--) {
-        const obj = pendingSnap[i], ty = hitTerrainY(obj.position.x, obj.position.z);
-        if (ty === null) continue;   // no terrain in view there yet
+        const obj = pendingSnap[i], ty = hitTerrainFineY(obj.position.x, obj.position.z);
+        if (ty === null) continue;   // no fine terrain there yet
         const y = ty + (obj.userData.yOffset ?? 0);
         if (Math.abs(obj.position.y - y) > 0.05) {
           obj.position.y = y;

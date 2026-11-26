@@ -194,13 +194,19 @@ function resolveInitialMode() {
   } catch (e) { /* ignore private storage errors */ }
   return 'osm';
 }
+/**
+ * The mode on screen. The city being flown decides, not renderMode (the mode for cities still to be built): a vector
+ * city can still be flying after the tour has fallen back to Google tiles for the ones to come, and the button, the
+ * sharpening and the toggle must all go by what is actually seen.
+ */
+const shownMode = () => (cur && cur.mode !== 'kit' ? cur.mode : renderMode);
 function syncModeUI() {
-  const b = $('b-mode');
+  const m = shownMode(), b = $('b-mode');
   if (b) {
-    b.textContent = renderMode === 'osm' ? '矢量精模' : '实景航拍';
-    b.classList.toggle('active', renderMode === 'osm');
+    b.textContent = m === 'osm' ? '矢量精模' : '实景航拍';
+    b.classList.toggle('active', m === 'osm');
   }
-  postUniforms.uSharp.value = renderMode === 'osm' ? 0.28 : 0.68;
+  postUniforms.uSharp.value = m === 'osm' ? 0.28 : 0.68;
 }
 
 /** Builds city `id` ready to fly. o.at: where along the flight (0..1) the camera will start, so that view is the one loaded. */
@@ -532,6 +538,7 @@ function arrived() {
   $('next').classList.remove('on'); document.title = `${m.zh} ${m.en} · 世界巡游`;
   if (!SHOT) history.replaceState(null, '', '#' + m.id);
   for (const b of document.querySelectorAll('#cities button')) b.classList.toggle('here', b.dataset.id === m.id);
+  syncModeUI();   // the city just arrived at may stand in another mode than the one left
   sound.retune(idxOf(m.id));
 }
 function showNextHint() { if (next) { $('next').textContent = `下一站 · ${next.meta.zh} ${next.meta.en}`; $('next').classList.add('on'); } }
@@ -591,10 +598,10 @@ function flashHint(text, ms = 3500) {
 function osmUnavailable() {
   if (renderMode !== 'osm') return;
   renderMode = 'google'; syncModeUI();
-  flashHint('矢量精模暂时不可用，已改用实景航拍');
+  flashHint('矢量精模暂时不可用，后面的城市改用实景航拍');
 }
 async function switchMode(target) {
-  if (switchingMode || !cur || target === renderMode) return;
+  if (switchingMode || !cur || target === shownMode()) return;
   if (target === 'osm' && !isIonProvider()) { flashHint('矢量精模需要 Cesium ion token（eyJ…）'); return; }
   switchingMode = true;   // hurryNext, jumpTo and loadNext all stand down until this is over
   clearTimeout(nextTimer);
@@ -617,7 +624,7 @@ async function switchMode(target) {
     if (fresh.mode === target) {
       renderMode = target;
       try { localStorage.setItem(MODE_STORE, renderMode); } catch (e) { /* ignore */ }
-    } else flashHint(`${modeLabel(target)}暂时不可用，仍为${modeLabel(renderMode)}`);
+    } else flashHint(`${modeLabel(target)}暂时不可用，仍为${modeLabel(shownMode())}`);
     syncModeUI();
     syncCameraFar(cur); syncTilePriorities();
     pose(cur, cur.t, cam.position, cam.quaternion);
@@ -627,7 +634,7 @@ async function switchMode(target) {
     lastCredits = ''; showCredits();
   } catch (e) {
     console.error('Failed to switch render mode:', e);
-    flashHint(`切换失败，仍为${modeLabel(renderMode)}`);
+    flashHint(`切换失败，仍为${modeLabel(shownMode())}`);
   } finally {
     $('veil').classList.add('gone');
     switchingMode = false;
@@ -642,7 +649,7 @@ function wireUI() {
   CITIES.forEach((c, i) => { const b = document.createElement('button'); b.dataset.id = c.id; b.innerHTML = `<i>${i + 1}</i><b>${c.zh}</b><span>${c.en}</span>`; b.onclick = () => { jumpTo(c.id); $('menu').hidden = true; }; list.appendChild(b); });
   $('b-pause').onclick = () => setPaused(!paused);
   $('b-next').onclick = () => hurryNext();
-  if ($('b-mode')) $('b-mode').onclick = () => switchMode(renderMode === 'osm' ? 'google' : 'osm');
+  if ($('b-mode')) $('b-mode').onclick = () => switchMode(shownMode() === 'osm' ? 'google' : 'osm');
   $('b-list').onclick = () => { $('menu').hidden = !$('menu').hidden; };
   $('b-sound').onclick = () => sound.toggle();
   $('b-full').onclick = () => { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };

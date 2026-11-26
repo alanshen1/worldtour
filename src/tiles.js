@@ -61,11 +61,38 @@ export const cacheInfo = () => ({
   mb: Math.round(DEFAULT_LRU_CACHE.cachedBytes / 1048576), maxMb: Math.round(DEFAULT_LRU_CACHE.maxBytesSize / 1048576),
   items: DEFAULT_LRU_CACHE.itemSet.size, maxItems: DEFAULT_LRU_CACHE.maxSize,
 });
+/**
+ * Spreads the starting of a queue's jobs over frames. The library starts up to maxJobs jobs in ONE animation frame,
+ * and the first part of a parse runs at once, on the main thread: a terrain tile builds its whole mesh there. Five of
+ * those in one frame were the 40 to 70 ms frames of a flight over a dense city. Here jobs are started one after another
+ * only until START_BUDGET_MS of the frame has gone; the rest wait for the next frame. As many jobs as before may be
+ * under way together (the slow part of most of them runs in a worker), and the order of the jobs is unchanged.
+ * name: what the ?debug readout calls the time spent starting jobs.
+ */
+const START_BUDGET_MS = 2;
+export function spreadJobStarts(queue, name = 'parseStart') {
+  if (queue.startsSpread) return;
+  queue.startsSpread = true;
+  const startAll = queue.tryRunJobs.bind(queue);
+  queue.tryRunJobs = () => {
+    const max = queue.maxJobs, t0 = performance.now();
+    try {
+      do {
+        if (queue.currJobs >= max || queue.items.length === 0) break;
+        queue.maxJobs = queue.currJobs + 1;   // room for exactly one more job
+        startAll();
+      } while (performance.now() - t0 < START_BUDGET_MS);
+    } finally { queue.maxJobs = max; }
+    if (PERF) perfAdd('in:' + name, performance.now() - t0);
+    if (queue.items.length > 0 && queue.currJobs < max) queue.scheduleJobRun();   // the rest: next frame
+  };
+}
 export function configureSharedQueues(shot) {
   if (queuesConfiguredFor === !!shot) return;
   queuesConfiguredFor = !!shot;
   DEFAULT_DOWNLOAD_QUEUE.priorityCallback = activeFirstPriority;
   DEFAULT_PARSE_QUEUE.priorityCallback = activeFirstPriority;
+  if (!shot) spreadJobStarts(DEFAULT_PARSE_QUEUE);   // still frames wait for everything anyway: no need to pace them
   // Unloading starts above the lower marks (tiles no longer in use go first); the upper marks are where new tiles
   // are refused. The tile count scales with the bytes so that it is never the count that refuses a tile first.
   const mb = cacheBudgetMB(shot), scale = Math.max(1, mb / 450);
