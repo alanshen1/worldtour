@@ -10,7 +10,7 @@ import {
   ImageOverlayPlugin, CesiumIonOverlay,
 } from '3d-tiles-renderer/plugins';
 import { createWorld } from './kit.js';
-import { apiKey, configureSharedQueues, cacheBudgetMB, dracoLoader } from './tiles.js';
+import { apiKey, configureSharedQueues, dracoLoader } from './tiles.js';
 import { PERF, perfAdd } from './perf.js';
 import { getLandmarkExclusions, placeHeroLandmarks } from './landmarks.js';
 
@@ -18,6 +18,35 @@ const D2R = Math.PI / 180;
 const ION_TERRAIN_ASSET = '1';      // Cesium World Terrain
 const ION_IMAGERY_ASSET = '2';      // Bing Maps Aerial
 const ION_OSM_ASSET = '96188';      // Cesium OSM Buildings
+
+/**
+ * The deepest level of aerial photo to ask for. Bing's metadata says its photos go to zoom 20 or 21 everywhere; in most
+ * places they stop a level or two short, and beyond that it sends a grey "no image" tile (a crossed-out camera) with a
+ * normal 200 answer. The library asks for the deepest level the source claims and goes on splitting terrain tiles to
+ * reach it, so the ground near the camera turned into a flat sheet of those tiles, slowly. 19 (about 0.3 m a pixel) is
+ * the deepest level that was there at all eight cities asked on 2026-11-26 (level 20: seven of eight, not Taipei, and
+ * patchy within a city; level 21: none). ?imagery=<15..21> sets another level by hand: lower it if a city still shows
+ * the crossed-out camera.
+ */
+const MAX_IMAGERY_LEVEL = 19;
+export function imageryMaxLevel() {
+  const asked = Number(typeof location === 'undefined' ? NaN : new URLSearchParams(location.search).get('imagery'));
+  return asked >= 15 && asked <= 21 ? Math.floor(asked) : MAX_IMAGERY_LEVEL;
+}
+/**
+ * Makes an image overlay stop at `maxLevel`: once the overlay has set up its image source, the levels beyond it are
+ * dropped from the source's tiling, so every part of the library that asks "how deep does this go?" gets the capped
+ * answer (which level to fetch, whether to split a terrain tile further). Returns the overlay.
+ */
+export function capImageryLevels(overlay, maxLevel) {
+  const initSource = overlay._initImageSource.bind(overlay);
+  overlay._initImageSource = () => initSource().then((result) => {
+    const levels = overlay.imageSource?.tiling?._levels;
+    if (levels && levels.length > maxLevel + 1) levels.length = maxLevel + 1;
+    return result;
+  });
+  return overlay;
+}
 
 /** Infers time-of-day mood (0 = crisp bright day, 0.35 = late afternoon, 1.0 = dusk/golden evening) from city.look. */
 function nightFactor(look) {
@@ -475,14 +504,12 @@ export async function buildOsmCity(city, renderer, o = {}) {
   terrainTiles.loadSiblings = true;
   terrainTiles.userData = { priority: typeof o.priority === 'number' ? o.priority : 0 };
   terrainTiles.registerPlugin(makeIonPlugin(key, ION_TERRAIN_ASSET));
-  // resolution: the pixels of aerial photo each terrain tile gets. A terrain tile is refined by the error of its shape,
-  // not by how sharp its photo is, and at the library's 256 one photo pixel covers about two pixels on screen even when
-  // everything has loaded: the ground looks soft. 512 brings it to about one. Four times the texture memory, so only
-  // where the tile cache is large enough to hold it.
-  terrainTiles.registerPlugin(new ImageOverlayPlugin({
-    overlays: [new CesiumIonOverlay({ apiToken: key, assetId: ION_IMAGERY_ASSET, autoRefreshToken: true })],
-    resolution: cacheBudgetMB(!!o.shot) >= 768 || o.shot ? 512 : 256,
-  }));
+  // The aerial photo on the ground. Its levels are capped (see capImageryLevels): without the cap the ground near the
+  // camera was papered with Bing's "no image" tile. resolution stays at the library's 256 px per terrain tile: 512 was
+  // tried for a sharper ground, but it asks for four times the photo tiles (the ground loaded slowly) and reached the
+  // missing levels a level sooner.
+  const imagery = capImageryLevels(new CesiumIonOverlay({ apiToken: key, assetId: ION_IMAGERY_ASSET, autoRefreshToken: true }), imageryMaxLevel());
+  terrainTiles.registerPlugin(new ImageOverlayPlugin({ overlays: [imagery] }));
   terrainTiles.registerPlugin(new ReorientationPlugin({ lat: city.lat * D2R, lon: city.lon * D2R, height: 0 }));
   terrainTiles.registerPlugin(terrainShadowPlugin());
   world.add(terrainTiles.group);
