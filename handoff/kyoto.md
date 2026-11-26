@@ -1,0 +1,8 @@
+Real city (Google 3D tiles). Kyoto replaces Kuala Lumpur. kyoto is not in index.js yet (the coordinator listed kuala-lumpur): test runs went through a temporary src/cities/kuala-lumpur.js re-exporting kyoto.js, deleted before commit. The coordinator must list `kyoto` instead of `kuala-lumpur`.
+Round 0 (coverage probes): Kuala Lumpur NOT covered (from 300 m the Petronas Towers and KLCC were a flat photo with painted shadows, ~25k triangles). Kyoto COVERED (buildings, Kamo river, Higashiyama all 3D). Origin on Kyoto Tower measured its top as ground (167 m): origin now on the Kamo river.
+Round 1 (1 run): Kyoto Tower -> Kamo -> Kiyomizu-dera -> Sannenzaka -> Yasaka Pagoda -> portal north over Gion. 4277 m, no lift. Kyoto Tower frames excellent; Kiyomizu small (camera 350 m off, over the cemetery); sun disc ahead.
+Round 2 (1 run): sun moved behind (axes: +x west, +z north); closer pass by Kiyomizu; end over Yasaka Shrine to a portal facing the Kamo. 4385 m, no lift. 0.60 Kiyomizu good; 0.70 a steep look straight down at roofs.
+Round 3 (1 run, 0.55-0.76 only): focus between Kiyomizu and Yasaka now leads along the slope. 0.62 Kiyomizu-dera's stage, pagoda and halls close (excellent); 0.72 and 0.76 the Yasaka Pagoda close.
+Portal (1 run, --next new-york): 0.985 the ring over Gion with the Kamo and its bridges to the right, New York through it (good). FINAL: 4385 m, 60 s, no lift.
+Frames overall: 0.05/0.15 Kyoto Tower; 0.62 Kiyomizu-dera; 0.72-0.76 Yasaka Pagoda; 0.80-0.97 Gion and the Kamo out to the mountains.
+Weak: 0.30-0.45 (Kamo crossing, climbing Higashiyama) is ordinary town; 0.55 looks over the Toribeyama cemetery towards Kiyomizu.

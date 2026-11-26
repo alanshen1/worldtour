@@ -1,0 +1,11 @@
+{
+  "name": "worldtour",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "世界巡游：穿过一道道传送门，从一座城市飞到下一座城市。",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "shot": "node tools/shot.mjs"
+  }
+}

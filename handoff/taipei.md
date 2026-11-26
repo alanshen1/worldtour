@@ -1,0 +1,7 @@
+Real city (Google 3D tiles). taipei is listed in index.js (coordinator, 960bfaa), so shots run on it directly.
+Round 0 (coverage probe, 1 run): COVERED. Camera 300 m west of Taipei 101: the tower, the Xinyi towers and the hills stand in full 3D with photo textures. An origin on top of a building measures that roof as the ground (origin on 101 gave ground=87 m): origin now on Liberty Square.
+Round 1 (1 run): 101 descending arc first, then west along Xinyi Road to CKS Memorial Hall. 6117 m, no lift. 101 frame excellent; Xinyi Road frames generic; CKS passed after the focus window.
+Round 2 (1 run): continued past CKS over the Presidential Office to the Tamsui. 6931 m, no lift. CKS hall at 0.70 excellent, 101 at 0.15 excellent, but the Presidential Office quarter is coarse flat tiles (0.80-0.97 blurry low-detail city).
+Round 3 (1 run): route turned round: Liberty Square arch -> CKS Memorial Hall -> Daan Forest Park -> Xinyi Road -> climbing towards Taipei 101, portal in front of the tower. 4511 m, 56 s, no lift anywhere.
+Frames: 0.05 CKS hall + 101 on the horizon; 0.12 CKS hall close (excellent); 0.40 Daan Forest Park; 0.55-0.97 Taipei 101 growing ahead with the hills behind (0.97 fills the frame). Accepted. Portal (1 run, --next new-york): 0.985 the ring beside Taipei 101 with the hills behind, New York through it (good). FINAL.
+Weak: 0.25 is generic city; the Tamsui river and the Presidential Office are not on the route (tiles there are poor).

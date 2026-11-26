@@ -1,0 +1,4 @@
+{
+  "_comment": "Drop custom .glb hero landmark models into this folder and register them here by landmark id to override the built-in procedural model. Example: \"eiffel-tower\": { \"file\": \"eiffel-tower.glb\", \"scale\": 1, \"rotationY\": 0, \"yOffset\": 0 }",
+  "models": {}
+}

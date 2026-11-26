@@ -1,0 +1,5 @@
+# Hong Kong (real 3D tiles) — progress notes
+Round 1 (shot run 1): low west along the harbour from Causeway Bay, past HKCEC, IFC east side, BoC, up the Mid-Levels to face the Peak. Path 4917 m, no lift. Weak: start beside blobby boats; ending stared into the hillside.
+Round 2 (shot run 2): start moved north into open water, closer pass of HKCEC and BoC (~190 m), end turns right past the Peak Tower and finishes at 460 m over the Mid-Levels looking down the harbour to the ICC. Path 5645 m, 62 s, no lift. Frames: 0.45 IFC+wheel+BoC, 0.6 BoC fills frame, 0.8-0.9 Peak, 0.97 harbour + ICC. Weak: harbour leg 0.05-0.35 is mostly water with the skylines far off.
+Round 3 (shot runs 3-4): final check with --next new-york: portal at 460 m over the Mid-Levels, ring in open air over the harbour with New York inside, ICC to the right. No lift anywhere. Sky bottom set to the fog colour. Still weak: a dark low-detail sea tile shows as a grey wedge on the far left of the harbour in the last frames (tile data, not the sky); harbour leg 0.05-0.35 mostly water.
+DONE. Shot runs used: 4 (6 root loads).

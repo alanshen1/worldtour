@@ -1,0 +1,10 @@
+Real city (Google 3D tiles). rome is listed in index.js.
+Round 0 (coverage probe, 1 run): COVERED. Colosseum, Forum and the whole centre stand in 3D.
+Round 1 (1 run, via a temporary alias): Colosseum arc -> Forum -> Capitol/Vittoriano -> Tiber Island -> up the Tiber -> Castel Sant'Angelo -> Via della Conciliazione. 4396 m, no lift. Colosseum (0.15) and Forum + Vittoriano (0.30) excellent. River section ran east of the Tiber over roofs; end north of Conciliazione.
+Survey (1 run): straight-down frames from 900 m to read the Tiber, Castel Sant'Angelo and St Peter's positions.
+Round 2 (1 run): river section on the Tiber, sun to the west (axes: +x west, +z north). 4319 m, no lift. 0.42 Vittoriano + Capitoline; 0.65 down the Tiber with St Peter's dome far ahead; 0.85 Ponte Sisto, Castel Sant'Angelo in the distance; 0.97 St Peter's Square and dome dead ahead (excellent). Weak: 0.55 and 0.75 dominated by riverside plane trees (camera at 45 m).
+Round 3: river 58-62 m, follows the river via Ponte Garibaldi, ends via Ponte Vittorio Emanuele II beside Castel Sant'Angelo into Conciliazione. 4370 m, lift 1 m at 0.05 only. 0.50 Tiber Island with Ponte Cestio; 0.60 Ponte Sisto, St Peter's dome straight ahead; 0.70-0.78 up the Tiber, dome to the left; 0.86 Ponte Vittorio Emanuele II and Castel Sant'Angelo; 0.93 St Peter's Square and dome ahead.
+Portal (1 run, --next new-york): 0.985 the ring stands over St Peter's Square, New York through it. OK.
+Round 4 (1 run, 0.05-0.40): trimmed to 16 points (two near-collinear points removed); 4366 m, 60 s, no lift. Colosseum (0.15) and Vittoriano (0.40) still excellent. FINAL.
+Frames: 0.15 Colosseum (fills the frame); 0.30 Forum, Arch of Titus, Vittoriano behind; 0.40 Vittoriano + Capitoline; 0.50 Tiber Island; 0.60 Ponte Sisto; 0.86 Castel Sant'Angelo; 0.93/0.985 St Peter's.
+Weak: river frames have heavy plane-tree canopies along the banks; 0.05 is mostly roofs with the Colosseum small ahead; the portal ring covers St Peter's dome in the last second.
